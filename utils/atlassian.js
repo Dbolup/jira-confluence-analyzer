@@ -206,8 +206,7 @@ export async function getPriorities({ headers, baseUrl }) {
 }
 
 export async function getPrioritySchemes({ headers, baseUrl }) {
-  const v2BaseUrl = baseUrl.replace('/rest/api/3', '/rest/api/2');
-  const res = await fetch(`${v2BaseUrl}/priorityscheme`, { headers });
+  const res = await fetch(`${baseUrl}/priorityscheme`, { headers });
   const data = await res.json();
 
   if (!res.ok) {
@@ -240,8 +239,7 @@ export async function getNotificationSchemes({ headers, baseUrl }) {
 }
 
 export async function getIssueSecuritySchemes({ headers, baseUrl }) {
-  const v2BaseUrl = baseUrl.replace('/rest/api/3', '/rest/api/2');
-  const res = await fetch(`${v2BaseUrl}/issuesecurityschemes`, { headers });
+  const res = await fetch(`${baseUrl}/issuesecurityschemes`, { headers });
   const data = await res.json();
 
   if (!res.ok) {
