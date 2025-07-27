@@ -2,22 +2,6 @@
 import fetch from "node-fetch";
 import "./env.js"; // Ensure env is loaded
 
-if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
-  throw new Error("Missing JIRA_EMAIL or JIRA_API_TOKEN in environment");
-}
-
-const authHeader = `Basic ${Buffer.from(
-  `${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`,
-).toString("base64")}`;
-
-const headers = {
-  Authorization: authHeader,
-  Accept: "application/json",
-};
-
-const baseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/api/3`;
-const agileBaseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/agile/1.0`;
-
 export async function getProjects({ headers, baseUrl }) {
   let startAt = 0;
   const maxResults = 50;
