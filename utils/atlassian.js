@@ -209,3 +209,222 @@ export async function getIssueTypeSchemes({ headers, baseUrl }) {
 
   return total;
 }
+
+export async function getPriorities({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/priority`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Priorities fetch failed: ${res.status}`);
+  }
+
+  return data.length;
+}
+
+export async function getPrioritySchemes({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/priorityschemes?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Priority Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getStatuses({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/status`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Statuses fetch failed: ${res.status}`);
+  }
+
+  return data.length;
+}
+
+export async function getNotificationSchemes({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/notificationscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Notification Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getIssueSecuritySchemes({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/issuesecurityschemes`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Issue Security Schemes fetch failed: ${res.status}`);
+  }
+
+  return (data.issueSecuritySchemes || []).length;
+}
+
+export async function getScreens({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 100;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/screens?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Screens fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getScreenSchemes({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 25;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/screenscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Screen Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getIssueTypeScreenSchemes({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/issuetypescreenscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Issue Type Screen Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getFieldConfigurations({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/fieldconfiguration?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Field Configurations fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getFieldConfigurationSchemes({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/fieldconfigurationscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Field Configuration Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getResolutions({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/resolution`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Resolutions fetch failed: ${res.status}`);
+  }
+
+  return data.length;
+}

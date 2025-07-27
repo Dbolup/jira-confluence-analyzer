@@ -17,6 +17,17 @@ import {
   getWorkflowSchemes,
   getIssueTypes,
   getIssueTypeSchemes,
+  getPriorities,
+  getPrioritySchemes,
+  getStatuses,
+  getNotificationSchemes,
+  getIssueSecuritySchemes,
+  getScreens,
+  getScreenSchemes,
+  getIssueTypeScreenSchemes,
+  getFieldConfigurations,
+  getFieldConfigurationSchemes,
+  getResolutions,
 } from "./utils/atlassian.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -52,7 +63,7 @@ app.post("/api/stats", async (req, res) => {
       };
 
       try {
-        const [projects, fields, permissions, filters, dashboards, boards, workflows, workflowSchemes, issueTypes, issueTypeSchemes] = await Promise.all([
+        const [projects, fields, permissions, filters, dashboards, boards, workflows, workflowSchemes, issueTypes, issueTypeSchemes, priorities, prioritySchemes, statuses, notificationSchemes, issueSecuritySchemes, screens, screenSchemes, issueTypeScreenSchemes, fieldConfigurations, fieldConfigurationSchemes, resolutions] = await Promise.all([
           getProjects({ headers, baseUrl }),
           getCustomFields({ headers, baseUrl }),
           getPermissionSchemes({ headers, baseUrl }),
@@ -63,6 +74,17 @@ app.post("/api/stats", async (req, res) => {
           getWorkflowSchemes({ headers, baseUrl }),
           getIssueTypes({ headers, baseUrl }),
           getIssueTypeSchemes({ headers, baseUrl }),
+          getPriorities({ headers, baseUrl }),
+          getPrioritySchemes({ headers, baseUrl }),
+          getStatuses({ headers, baseUrl }),
+          getNotificationSchemes({ headers, baseUrl }),
+          getIssueSecuritySchemes({ headers, baseUrl }),
+          getScreens({ headers, baseUrl }),
+          getScreenSchemes({ headers, baseUrl }),
+          getIssueTypeScreenSchemes({ headers, baseUrl }),
+          getFieldConfigurations({ headers, baseUrl }),
+          getFieldConfigurationSchemes({ headers, baseUrl }),
+          getResolutions({ headers, baseUrl }),
         ]);
 
         return {
@@ -77,6 +99,17 @@ app.post("/api/stats", async (req, res) => {
           workflowSchemeCount: workflowSchemes,
           issueTypeCount: issueTypes,
           issueTypeSchemeCount: issueTypeSchemes,
+          priorityCount: priorities,
+          prioritySchemeCount: prioritySchemes,
+          statusCount: statuses,
+          notificationSchemeCount: notificationSchemes,
+          issueSecuritySchemeCount: issueSecuritySchemes,
+          screenCount: screens,
+          screenSchemeCount: screenSchemes,
+          issueTypeScreenSchemeCount: issueTypeScreenSchemes,
+          fieldConfigurationCount: fieldConfigurations,
+          fieldConfigurationSchemeCount: fieldConfigurationSchemes,
+          resolutionCount: resolutions,
         };
       } catch (e) {
         return { domain, error: e.message };
