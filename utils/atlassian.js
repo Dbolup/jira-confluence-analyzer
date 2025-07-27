@@ -75,7 +75,7 @@ export async function getFilters({ headers, baseUrl }) {
   let total = 0;
 
   while (true) {
-    const res = await fetch(`${baseUrl}/filter/search?startAt=${startAt}&maxResults=${maxResults}`, {
+    const res = await fetch(`${baseUrl}/filter/search?startAt=${startAt}&maxResults=${maxResults}&overrideSharePermissions=true`, {
       headers,
     });
 
