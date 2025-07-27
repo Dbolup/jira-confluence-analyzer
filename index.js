@@ -95,7 +95,17 @@ app.post("/api/stats", async (req, res) => {
         // Helper function to safely get value or return error indicator
         const getValue = (result, index, defaultValue = 0) => {
           if (result.status === 'fulfilled') {
-            return Array.isArray(result.value) ? result.value.length : result.value;
+            const value = result.value;
+            // If it's an object with a total property, return that
+            if (typeof value === 'object' && value !== null && 'total' in value) {
+              return value.total;
+            }
+            // If it's an array, return its length
+            if (Array.isArray(value)) {
+              return value.length;
+            }
+            // Otherwise return the value directly
+            return value;
           }
           console.warn(`API call ${index} failed:`, result.reason?.message);
           return `❌ Error`;
@@ -209,25 +219,25 @@ app.post("/api/insights", async (req, res) => {
           projectCount: projects.total || getValue(results[0], 'projects'),
           projectsActive: projects.active || 0,
           projectsArchived: projects.archived || 0,
-          
+
           // Custom fields with duplicates analysis
           fieldCount: customFields.total || getValue(results[1], 'fields'),
           fieldsUnique: customFields.unique || 0,
           fieldsDuplicated: customFields.duplicates || 0,
-          
+
           // Schemes with active/inactive breakdown
           permissionSchemeCount: permissionSchemes.total || getValue(results[2], 'permissions'),
           permissionSchemesActive: permissionSchemes.active || 0,
           permissionSchemesInactive: permissionSchemes.inactive || 0,
-          
+
           workflowSchemeCount: workflowSchemes.total || getValue(results[7], 'workflowSchemes'),
           workflowSchemesActive: workflowSchemes.active || 0,
           workflowSchemesInactive: workflowSchemes.inactive || 0,
-          
+
           issueTypeSchemeCount: issueTypeSchemes.total || getValue(results[9], 'issueTypeSchemes'),
           issueTypeSchemesActive: issueTypeSchemes.active || 0,
           issueTypeSchemesInactive: issueTypeSchemes.inactive || 0,
-          
+
           // Keep the other metrics as simple counts for now
           filterCount: getValue(results[3], 'filters'),
           dashboardCount: getValue(results[4], 'dashboards'),

@@ -432,6 +432,12 @@
         <a href="/" class="nav-btn inactive">📊 Basic Stats</a>
         <div class="nav-btn active">🔍 Detailed Insights</div>
       </div>
+      
+      <div class="export-buttons" style="justify-content: center; margin-bottom: 2rem;">
+        <button class="btn-export" style="background: linear-gradient(135deg, #6366f1, #4f46e5);" onclick="window.history.back()">
+          ← Back to Basic Stats
+        </button>
+      </div>
 
       <form class="site-form" id="site-form">
         <div id="site-inputs"></div>
@@ -856,8 +862,30 @@
         }, 250);
       }
 
+      // Load credentials from sessionStorage if available
+      function loadStoredCredentials() {
+        const stored = sessionStorage.getItem('atlassianCredentials');
+        if (stored) {
+          try {
+            const sites = JSON.parse(stored);
+            sites.forEach((site, index) => {
+              if (index > 0) addSiteInput(); // Add extra inputs if needed
+              
+              document.querySelector(`[name="domain-${index}"]`).value = site.domain;
+              document.querySelector(`[name="email-${index}"]`).value = site.email;
+              document.querySelector(`[name="token-${index}"]`).value = site.token;
+            });
+          } catch (e) {
+            console.warn('Failed to load stored credentials:', e);
+          }
+        }
+      }
+      
       // Add initial site input
       addSiteInput();
+      
+      // Load stored credentials after adding the first input
+      setTimeout(loadStoredCredentials, 100);
     </script>
   </body>
 </html>

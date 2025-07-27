@@ -417,6 +417,12 @@
         <div class="nav-btn active">📊 Basic Stats</div>
         <a href="/insights" class="nav-btn inactive">🔍 Get Insights</a>
       </div>
+      
+      <div class="export-buttons" id="detailed-insights-button" style="display: none; justify-content: center; margin-bottom: 2rem;">
+        <button class="btn-export" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);" onclick="goToDetailedInsights()">
+          🔍 View Detailed Insights
+        </button>
+      </div>
 
       <form class="site-form" id="site-form">
         <div id="site-inputs"></div>
@@ -519,6 +525,7 @@
           renderTable(data.results);
           document.getElementById('stats-container').classList.add('show');
           document.getElementById('export-buttons').style.display = 'flex';
+          document.getElementById('detailed-insights-button').style.display = 'flex';
         } catch (error) {
           alert('Error fetching data: ' + error.message);
         } finally {
@@ -742,6 +749,25 @@
         }, 250);
       }
 
+      // Function to go to detailed insights with current credentials
+      function goToDetailedInsights() {
+        const sites = [];
+        for (let i = 0; i < siteCounter; i++) {
+          const domain = document.querySelector(`[name="domain-${i}"]`)?.value;
+          const email = document.querySelector(`[name="email-${i}"]`)?.value;
+          const token = document.querySelector(`[name="token-${i}"]`)?.value;
+          if (domain && email && token) {
+            sites.push({ domain, email, token });
+          }
+        }
+        
+        // Store credentials in sessionStorage
+        sessionStorage.setItem('atlassianCredentials', JSON.stringify(sites));
+        
+        // Navigate to insights page
+        window.location.href = '/insights';
+      }
+      
       // Add initial site input
       addSiteInput();
     </script>
