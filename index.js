@@ -53,12 +53,12 @@ app.post("/api/stats", async (req, res) => {
 
       try {
         const [projects, fields, permissions, filters, dashboards, boards, workflows, workflowSchemes, issueTypes, issueTypeSchemes] = await Promise.all([
-          getProjects(), // Note: this function still uses global headers
-          getCustomFields(), // Same here
+          getProjects({ headers, baseUrl }),
+          getCustomFields({ headers, baseUrl }),
           getPermissionSchemes({ headers, baseUrl }),
           getFilters({ headers, baseUrl }),
           getDashboards({ headers, baseUrl }),
-          getBoards({ headers }),
+          getBoards({ headers, agileBaseUrl }),
           getWorkflows({ headers, baseUrl }),
           getWorkflowSchemes({ headers, baseUrl }),
           getIssueTypes({ headers, baseUrl }),

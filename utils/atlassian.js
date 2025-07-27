@@ -18,7 +18,7 @@ const headers = {
 const baseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/api/3`;
 const agileBaseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/agile/1.0`;
 
-export async function getProjects() {
+export async function getProjects({ headers, baseUrl }) {
   let startAt = 0;
   const maxResults = 50;
   const allProjects = [];
@@ -55,7 +55,7 @@ export async function getProjects() {
   return allProjects;
 }
 
-export async function getCustomFields() {
+export async function getCustomFields({ headers, baseUrl }) {
   const response = await fetch(`${baseUrl}/field`, { headers });
   const data = await response.json();
 
@@ -124,7 +124,7 @@ export async function getDashboards({ headers, baseUrl }) {
   return data.total || 0;
 }
 
-export async function getBoards({ headers }) {
+export async function getBoards({ headers, agileBaseUrl }) {
   let startAt = 0;
   const maxResults = 50;
   let total = 0;
