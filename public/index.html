@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -5,87 +6,354 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlassian Site Stats</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+      
       body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-        background-color: #f9f9fb;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: #1c1e21;
         padding: 2rem;
+        min-height: 100vh;
+        position: relative;
       }
+      
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+        pointer-events: none;
+        z-index: -1;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 3rem;
+        animation: slideUp 0.6s ease-out;
+      }
+      
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
       h1 {
-        font-weight: 600;
-        font-size: 1.75rem;
+        font-weight: 700;
+        font-size: 2.5rem;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 3rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
       }
+      
+      h1::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 2px;
+      }
+      
       .site-form {
         display: flex;
         flex-direction: column;
-        max-width: 800px;
-        margin: auto;
+        margin-bottom: 3rem;
       }
+      
       .site-block {
         background: white;
-        border: 1px solid #e2e2e2;
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 2px solid #f0f0f0;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       }
+      
+      .site-block::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+      }
+      
+      .site-block:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+      }
+      
+      .site-block:hover::before {
+        transform: scaleX(1);
+      }
+      
+      .input-group {
+        margin-bottom: 1.5rem;
+      }
+      
+      .site-block label {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #374151;
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      
       .site-block input[type="text"],
       .site-block input[type="email"],
       .site-block input[type="password"] {
         width: 100%;
-        padding: 0.6rem;
-        margin-top: 0.25rem;
-        margin-bottom: 0.75rem;
-        font-size: 0.95rem;
-        border: 1px solid #ccc;
-        border-radius: 8px;
+        padding: 1rem;
+        font-size: 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        background: #fafafa;
       }
-      label {
-        font-weight: 500;
-        font-size: 0.9rem;
+      
+      .site-block input:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
       }
-      button {
+      
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         margin-top: 1rem;
-        padding: 0.6rem 1.2rem;
-        background-color: #007aff;
-        color: white;
-        border: none;
+        padding: 1rem;
+        background: #f8fafc;
         border-radius: 8px;
+      }
+      
+      .checkbox-container input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #667eea;
+      }
+      
+      .checkbox-container label {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #64748b;
+      }
+      
+      .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      
+      button {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       }
-      button:hover {
-        background-color: #005bb5;
-      }
-      table {
-        border-collapse: collapse;
-        margin-top: 3rem;
+      
+      button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
         width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
       }
+      
+      button:hover::before {
+        left: 100%;
+      }
+      
+      .btn-add {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        flex: 1;
+      }
+      
+      .btn-add:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      }
+      
+      .btn-submit {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        flex: 2;
+      }
+      
+      .btn-submit:hover {
+        background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      }
+      
+      .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 0.5rem;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      .stats-container {
+        margin-top: 3rem;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s ease;
+      }
+      
+      .stats-container.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      
       th, td {
         text-align: center;
-        padding: 0.75rem;
-        border: 1px solid #e0e0e0;
-        font-size: 0.9rem;
+        padding: 1.2rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+        transition: background-color 0.2s ease;
       }
+      
       th {
-        background-color: #fafafa;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
         font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+      }
+      
+      tr:hover td {
+        background-color: #f8fafc;
+      }
+      
+      td:first-child {
+        font-weight: 600;
+        color: #374151;
+        text-align: left;
+        background: #f8fafc;
+      }
+      
+      .metric-value {
+        font-weight: 600;
+        color: #667eea;
+      }
+      
+      .error {
+        color: #ef4444;
+        font-weight: 500;
+      }
+      
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem;
+        }
+        
+        .container {
+          padding: 2rem;
+        }
+        
+        h1 {
+          font-size: 2rem;
+        }
+        
+        .button-group {
+          flex-direction: column;
+        }
+        
+        table {
+          font-size: 0.8rem;
+        }
+        
+        th, td {
+          padding: 0.8rem 0.5rem;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Atlassian Site Overview</h1>
-    <form class="site-form" id="site-form">
-      <div id="site-inputs"></div>
-      <button type="button" onclick="addSiteInput()">Add Site</button>
-      <button type="submit">Get Stats</button>
-    </form>
+    <div class="container">
+      <h1>Atlassian Site Overview</h1>
+      <form class="site-form" id="site-form">
+        <div id="site-inputs"></div>
+        <div class="button-group">
+          <button type="button" class="btn-add" onclick="addSiteInput()">
+            ➕ Add Site
+          </button>
+          <button type="submit" class="btn-submit" id="submit-btn">
+            📊 Get Stats
+          </button>
+        </div>
+      </form>
 
-    <table id="stats-table"></table>
+      <div class="stats-container" id="stats-container">
+        <table id="stats-table"></table>
+      </div>
+    </div>
 
     <script>
       let siteCounter = 0;
@@ -94,19 +362,27 @@
         const container = document.getElementById('site-inputs');
         const div = document.createElement('div');
         div.className = 'site-block';
+        div.style.animation = 'slideUp 0.4s ease-out';
 
         div.innerHTML = `
-          <label>Site URL (e.g. mysite.atlassian.net)</label>
-          <input type="text" name="domain-${siteCounter}" required />
+          <div class="input-group">
+            <label>🌐 Site URL (e.g. mysite.atlassian.net)</label>
+            <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
+          </div>
 
-          <label>Email</label>
-          <input type="email" name="email-${siteCounter}" required />
+          <div class="input-group">
+            <label>📧 Email</label>
+            <input type="email" name="email-${siteCounter}" placeholder="your.email@company.com" required />
+          </div>
 
-          <label>API Token</label>
-          <input type="password" name="token-${siteCounter}" required />
+          <div class="input-group">
+            <label>🔑 API Token</label>
+            <input type="password" name="token-${siteCounter}" placeholder="Your API token" required />
+          </div>
 
-          <div>
-            <input type="checkbox" onchange="reuseCreds(this, ${siteCounter})"> Reuse credentials from Site 1
+          <div class="checkbox-container">
+            <input type="checkbox" id="reuse-${siteCounter}" onchange="reuseCreds(this, ${siteCounter})">
+            <label for="reuse-${siteCounter}">🔄 Reuse credentials from Site 1</label>
           </div>
         `;
 
@@ -116,55 +392,82 @@
 
       function reuseCreds(checkbox, index) {
         if (!checkbox.checked || index === 0) return;
-        const email = document.querySelector('[name="email-0"]').value;
-        const token = document.querySelector('[name="token-0"]').value;
-        document.querySelector(`[name="email-${index}"]`).value = email;
-        document.querySelector(`[name="token-${index}"]`).value = token;
+        const email = document.querySelector('[name="email-0"]')?.value;
+        const token = document.querySelector('[name="token-0"]')?.value;
+        if (email && token) {
+          document.querySelector(`[name="email-${index}"]`).value = email;
+          document.querySelector(`[name="token-${index}"]`).value = token;
+        }
       }
 
       document.getElementById('site-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = document.getElementById('submit-btn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading"></span>Loading...';
+        
         const sites = [];
         for (let i = 0; i < siteCounter; i++) {
-          const domain = document.querySelector(`[name="domain-${i}"]`).value.replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
+          const domain = document.querySelector(`[name="domain-${i}"]`).value
+            .replace(/^https?:\/\//, '')
+            .replace(/\/$/, '')
+            .replace('.atlassian.net', '');
           const email = document.querySelector(`[name="email-${i}"]`).value;
           const token = document.querySelector(`[name="token-${i}"]`).value;
           sites.push({ domain, email, token });
         }
 
-        const res = await fetch('/api/stats', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sites })
-        });
+        try {
+          const res = await fetch('/api/stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sites })
+          });
 
-        const data = await res.json();
-        renderTable(data.results);
+          const data = await res.json();
+          renderTable(data.results);
+          document.getElementById('stats-container').classList.add('show');
+        } catch (error) {
+          alert('Error fetching data: ' + error.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
       });
 
       function renderTable(results) {
         const metrics = [
-          ['projectCount', 'Projects'],
-          ['dashboardCount', 'Dashboards'],
-          ['boardCount', 'Boards'],
-          ['fieldCount', 'Custom Fields'],
-          ['filterCount', 'Filters'],
-          ['permissionSchemeCount', 'Permission Schemes'],
-          ['workflowCount', 'Workflows'],
-          ['workflowSchemeCount', 'Workflow Schemes'],
-          ['issueTypeCount', 'Issue Types'],
-          ['issueTypeSchemeCount', 'Issue Type Schemes']
+          ['projectCount', '📋 Projects'],
+          ['dashboardCount', '📊 Dashboards'],
+          ['boardCount', '📌 Boards'],
+          ['fieldCount', '🏷️ Custom Fields'],
+          ['filterCount', '🔍 Filters'],
+          ['permissionSchemeCount', '🔐 Permission Schemes'],
+          ['workflowCount', '⚙️ Workflows'],
+          ['workflowSchemeCount', '🔄 Workflow Schemes'],
+          ['issueTypeCount', '🎫 Issue Types'],
+          ['issueTypeSchemeCount', '📝 Issue Type Schemes']
         ];
 
-        let html = '<tr><th>Resource</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
+        let html = '<tr><th>Resource</th>' + 
+          results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
 
         for (const [key, label] of metrics) {
-          html += `<tr><td>${label}</td>` + results.map(r => `<td>${r[key] ?? '-'}</td>`).join('') + '</tr>';
+          html += `<tr><td>${label}</td>` + 
+            results.map(r => {
+              if (r.error) {
+                return `<td class="error">Error</td>`;
+              }
+              return `<td><span class="metric-value">${r[key] ?? '-'}</span></td>`;
+            }).join('') + '</tr>';
         }
 
         document.getElementById('stats-table').innerHTML = html;
       }
 
+      // Add initial site input
       addSiteInput();
     </script>
   </body>
