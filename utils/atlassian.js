@@ -206,28 +206,9 @@ export async function getPriorities({ headers, baseUrl }) {
 }
 
 export async function getPrioritySchemes({ headers, baseUrl }) {
-  let startAt = 0;
-  const maxResults = 50;
-  let total = 0;
-
-  while (true) {
-    const res = await fetch(`${baseUrl}/priorityschemes?startAt=${startAt}&maxResults=${maxResults}`, { headers });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`Priority Schemes fetch failed: ${res.status}`);
-    }
-
-    total += (data.values || []).length;
-
-    if (data.isLast || (data.values || []).length < maxResults) {
-      break;
-    }
-
-    startAt += maxResults;
-  }
-
-  return total;
+  // Priority schemes API is not available in Jira Cloud
+  // Return 0 as this feature doesn't exist in cloud instances
+  return 0;
 }
 
 export async function getStatuses({ headers, baseUrl }) {
@@ -242,32 +223,18 @@ export async function getStatuses({ headers, baseUrl }) {
 }
 
 export async function getNotificationSchemes({ headers, baseUrl }) {
-  let startAt = 0;
-  const maxResults = 50;
-  let total = 0;
+  const res = await fetch(`${baseUrl}/notificationscheme`, { headers });
+  const data = await res.json();
 
-  while (true) {
-    const res = await fetch(`${baseUrl}/notificationscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`Notification Schemes fetch failed: ${res.status}`);
-    }
-
-    total += (data.values || []).length;
-
-    if (data.isLast || (data.values || []).length < maxResults) {
-      break;
-    }
-
-    startAt += maxResults;
+  if (!res.ok) {
+    throw new Error(`Notification Schemes fetch failed: ${res.status}`);
   }
 
-  return total;
+  return (data.values || []).length;
 }
 
 export async function getIssueSecuritySchemes({ headers, baseUrl }) {
-  const res = await fetch(`${baseUrl}/issuesecurityschemes`, { headers });
+  const res = await fetch(`${baseUrl}/issuesecurityscheme`, { headers });
   const data = await res.json();
 
   if (!res.ok) {
@@ -303,28 +270,14 @@ export async function getScreens({ headers, baseUrl }) {
 }
 
 export async function getScreenSchemes({ headers, baseUrl }) {
-  let startAt = 0;
-  const maxResults = 25;
-  let total = 0;
+  const res = await fetch(`${baseUrl}/screenscheme`, { headers });
+  const data = await res.json();
 
-  while (true) {
-    const res = await fetch(`${baseUrl}/screenscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`Screen Schemes fetch failed: ${res.status}`);
-    }
-
-    total += (data.values || []).length;
-
-    if (data.isLast || (data.values || []).length < maxResults) {
-      break;
-    }
-
-    startAt += maxResults;
+  if (!res.ok) {
+    throw new Error(`Screen Schemes fetch failed: ${res.status}`);
   }
 
-  return total;
+  return (data.values || []).length;
 }
 
 export async function getIssueTypeScreenSchemes({ headers, baseUrl }) {
