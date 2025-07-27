@@ -336,28 +336,14 @@ export async function getFieldConfigurations({ headers, baseUrl }) {
 }
 
 export async function getFieldConfigurationSchemes({ headers, baseUrl }) {
-  let startAt = 0;
-  const maxResults = 50;
-  let total = 0;
+  const res = await fetch(`${baseUrl}/fieldconfigurationscheme`, { headers });
+  const data = await res.json();
 
-  while (true) {
-    const res = await fetch(`${baseUrl}/fieldconfigurationscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(`Field Configuration Schemes fetch failed: ${res.status}`);
-    }
-
-    total += (data.values || []).length;
-
-    if (data.isLast || (data.values || []).length < maxResults) {
-      break;
-    }
-
-    startAt += maxResults;
+  if (!res.ok) {
+    throw new Error(`Field Configuration Schemes fetch failed: ${res.status}`);
   }
 
-  return total;
+  return data.total || 0;
 }
 
 export async function getResolutions({ headers, baseUrl }) {
