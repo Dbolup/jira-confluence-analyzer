@@ -336,7 +336,8 @@ export async function getFieldConfigurations({ headers, baseUrl }) {
 }
 
 export async function getFieldConfigurationSchemes({ headers, baseUrl }) {
-  const res = await fetch(`${baseUrl}/fieldconfigurationscheme`, { headers });
+  const v2BaseUrl = baseUrl.replace('/rest/api/3', '/rest/api/2');
+  const res = await fetch(`${v2BaseUrl}/fieldconfigurationscheme`, { headers });
   const data = await res.json();
 
   if (!res.ok) {
