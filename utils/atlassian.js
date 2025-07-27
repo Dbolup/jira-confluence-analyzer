@@ -206,9 +206,15 @@ export async function getPriorities({ headers, baseUrl }) {
 }
 
 export async function getPrioritySchemes({ headers, baseUrl }) {
-  // Priority schemes API is not available in Jira Cloud
-  // Return 0 as this feature doesn't exist in cloud instances
-  return 0;
+  const v2BaseUrl = baseUrl.replace('/rest/api/3', '/rest/api/2');
+  const res = await fetch(`${v2BaseUrl}/priorityscheme`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Priority Schemes fetch failed: ${res.status}`);
+  }
+
+  return (data.values || []).length;
 }
 
 export async function getStatuses({ headers, baseUrl }) {
@@ -234,7 +240,8 @@ export async function getNotificationSchemes({ headers, baseUrl }) {
 }
 
 export async function getIssueSecuritySchemes({ headers, baseUrl }) {
-  const res = await fetch(`${baseUrl}/issuesecurityscheme`, { headers });
+  const v2BaseUrl = baseUrl.replace('/rest/api/3', '/rest/api/2');
+  const res = await fetch(`${v2BaseUrl}/issuesecurityschemes`, { headers });
   const data = await res.json();
 
   if (!res.ok) {
