@@ -186,12 +186,26 @@ export async function getIssueTypes({ headers, baseUrl }) {
 }
 
 export async function getIssueTypeSchemes({ headers, baseUrl }) {
-  const res = await fetch(`${baseUrl}/issuetypescheme`, { headers });
-  const data = await res.json();
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
 
-  if (!res.ok) {
-    throw new Error(`Issue Type Schemes fetch failed: ${res.status}`);
+  while (true) {
+    const res = await fetch(`${baseUrl}/issuetypescheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Issue Type Schemes fetch failed: ${res.status}`);
+    }
+
+    total += (data.values || []).length;
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
   }
 
-  return (data.issueTypeSchemes || []).length;
+  return total;
 }
