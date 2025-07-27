@@ -1,0 +1,92 @@
+// index.js
+import express from "express";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
+import {
+  getProjects,
+  getCustomFields,
+  getPermissionSchemes,
+  getFilters,
+  getDashboards,
+  getBoards,
+  getWorkflows,
+  getWorkflowSchemes,
+  getIssueTypes,
+  getIssueTypeSchemes,
+} from "./utils/atlassian.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.post("/api/stats", async (req, res) => {
+  const sites = req.body.sites;
+  if (!Array.isArray(sites)) {
+    return res.status(400).json({ error: "Expected 'sites' to be an array" });
+  }
+
+  const results = await Promise.all(
+    sites.map(async (site) => {
+      const { email, token, domain } = site;
+
+      const baseUrl = `https://${domain}.atlassian.net/rest/api/3`;
+      const agileBaseUrl = `https://${domain}.atlassian.net/rest/agile/1.0`;
+      const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`;
+
+      const headers = {
+        Authorization: authHeader,
+        Accept: "application/json",
+      };
+
+      try {
+        const [projects, fields, permissions, filters, dashboards, boards, workflows, workflowSchemes, issueTypes, issueTypeSchemes] = await Promise.all([
+          getProjects(), // Note: this function still uses global headers
+          getCustomFields(), // Same here
+          getPermissionSchemes({ headers, baseUrl }),
+          getFilters({ headers, baseUrl }),
+          getDashboards({ headers, baseUrl }),
+          getBoards({ headers }),
+          getWorkflows({ headers, baseUrl }),
+          getWorkflowSchemes({ headers, baseUrl }),
+          getIssueTypes({ headers, baseUrl }),
+          getIssueTypeSchemes({ headers, baseUrl }),
+        ]);
+
+        return {
+          domain,
+          projectCount: projects.length,
+          fieldCount: fields.length,
+          permissionSchemeCount: permissions,
+          filterCount: filters,
+          dashboardCount: dashboards,
+          boardCount: boards,
+          workflowCount: workflows,
+          workflowSchemeCount: workflowSchemes,
+          issueTypeCount: issueTypes,
+          issueTypeSchemeCount: issueTypeSchemes,
+        };
+      } catch (e) {
+        return { domain, error: e.message };
+      }
+    })
+  );
+
+  res.json({ results });
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});

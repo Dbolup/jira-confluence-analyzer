@@ -1,0 +1,197 @@
+// utils/atlassian.js
+import fetch from "node-fetch";
+import "./env.js"; // Ensure env is loaded
+
+if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
+  throw new Error("Missing JIRA_EMAIL or JIRA_API_TOKEN in environment");
+}
+
+const authHeader = `Basic ${Buffer.from(
+  `${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`,
+).toString("base64")}`;
+
+const headers = {
+  Authorization: authHeader,
+  Accept: "application/json",
+};
+
+const baseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/api/3`;
+const agileBaseUrl = `https://${process.env.JIRA_DOMAIN}.atlassian.net/rest/agile/1.0`;
+
+export async function getProjects() {
+  let startAt = 0;
+  const maxResults = 50;
+  const allProjects = [];
+
+  while (true) {
+    const response = await fetch(
+      `${baseUrl}/project/search?startAt=${startAt}&maxResults=${maxResults}`,
+      { headers },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch projects: ${response.status}`);
+    }
+
+    const projects = (data.values || []).map((project) => ({
+      id: project.id,
+      key: project.key,
+      name: project.name,
+      type: project.projectTypeKey,
+      lead: project.lead?.displayName || "Unknown",
+    }));
+
+    allProjects.push(...projects);
+
+    if (data.isLast || projects.length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return allProjects;
+}
+
+export async function getCustomFields() {
+  const response = await fetch(`${baseUrl}/field`, { headers });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch fields: ${response.status}`);
+  }
+
+  return data.map((field) => ({
+    id: field.id,
+    name: field.name,
+    key: field.key,
+    type: field.schema?.type || "unknown",
+    custom: field.custom || false,
+    searchable: field.searchable,
+    navigable: field.navigable,
+  }));
+}
+
+export async function getPermissionSchemes({ headers, baseUrl }) {
+  const response = await fetch(`${baseUrl}/permissionscheme`, { headers });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`Permission schemes fetch failed: ${response.status}`);
+  }
+
+  return (data.permissionSchemes || []).length;
+}
+
+export async function getFilters({ headers, baseUrl }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${baseUrl}/filter/search?startAt=${startAt}&maxResults=${maxResults}`, {
+      headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Filters fetch failed: ${res.status}`);
+    }
+
+    total += data.values?.length || 0;
+
+    if (data.isLast || data.values.length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
+  }
+
+  return total;
+}
+
+export async function getDashboards({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/dashboard`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Dashboards fetch failed: ${res.status}`);
+  }
+
+  return data.total || 0;
+}
+
+export async function getBoards({ headers }) {
+  let startAt = 0;
+  const maxResults = 50;
+  let total = 0;
+
+  while (true) {
+    const res = await fetch(`${agileBaseUrl}/board?startAt=${startAt}&maxResults=${maxResults}`, {
+      headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Boards fetch failed: ${res.status}`);
+    }
+
+    total += data.values?.length || 0;
+
+    if (!data.isLast && data.values.length === maxResults) {
+      startAt += maxResults;
+    } else {
+      break;
+    }
+  }
+
+  return total;
+}
+
+export async function getWorkflows({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/workflow/search`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Workflows fetch failed: ${res.status}`);
+  }
+
+  return data.total || 0;
+}
+
+export async function getWorkflowSchemes({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/workflowscheme`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Workflow Schemes fetch failed: ${res.status}`);
+  }
+
+  return (data.values || []).length;
+}
+
+export async function getIssueTypes({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/issuetype`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Issue Types fetch failed: ${res.status}`);
+  }
+
+  return data.length;
+}
+
+export async function getIssueTypeSchemes({ headers, baseUrl }) {
+  const res = await fetch(`${baseUrl}/issuetypescheme`, { headers });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`Issue Type Schemes fetch failed: ${res.status}`);
+  }
+
+  return (data.issueTypeSchemes || []).length;
+}

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atlassian Site Stats</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        background-color: #f9f9fb;
+        color: #1c1e21;
+        padding: 2rem;
+      }
+      h1 {
+        font-weight: 600;
+        font-size: 1.75rem;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .site-form {
+        display: flex;
+        flex-direction: column;
+        max-width: 800px;
+        margin: auto;
+      }
+      .site-block {
+        background: white;
+        border: 1px solid #e2e2e2;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .site-block input[type="text"],
+      .site-block input[type="email"],
+      .site-block input[type="password"] {
+        width: 100%;
+        padding: 0.6rem;
+        margin-top: 0.25rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      label {
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.6rem 1.2rem;
+        background-color: #007aff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+      }
+      button:hover {
+        background-color: #005bb5;
+      }
+      table {
+        border-collapse: collapse;
+        margin-top: 3rem;
+        width: 100%;
+      }
+      th, td {
+        text-align: center;
+        padding: 0.75rem;
+        border: 1px solid #e0e0e0;
+        font-size: 0.9rem;
+      }
+      th {
+        background-color: #fafafa;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Atlassian Site Overview</h1>
+    <form class="site-form" id="site-form">
+      <div id="site-inputs"></div>
+      <button type="button" onclick="addSiteInput()">Add Site</button>
+      <button type="submit">Get Stats</button>
+    </form>
+
+    <table id="stats-table"></table>
+
+    <script>
+      let siteCounter = 0;
+
+      function addSiteInput() {
+        const container = document.getElementById('site-inputs');
+        const div = document.createElement('div');
+        div.className = 'site-block';
+
+        div.innerHTML = `
+          <label>Site URL (e.g. mysite.atlassian.net)</label>
+          <input type="text" name="domain-${siteCounter}" required />
+
+          <label>Email</label>
+          <input type="email" name="email-${siteCounter}" required />
+
+          <label>API Token</label>
+          <input type="password" name="token-${siteCounter}" required />
+
+          <div>
+            <input type="checkbox" onchange="reuseCreds(this, ${siteCounter})"> Reuse credentials from Site 1
+          </div>
+        `;
+
+        container.appendChild(div);
+        siteCounter++;
+      }
+
+      function reuseCreds(checkbox, index) {
+        if (!checkbox.checked || index === 0) return;
+        const email = document.querySelector('[name="email-0"]').value;
+        const token = document.querySelector('[name="token-0"]').value;
+        document.querySelector(`[name="email-${index}"]`).value = email;
+        document.querySelector(`[name="token-${index}"]`).value = token;
+      }
+
+      document.getElementById('site-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sites = [];
+        for (let i = 0; i < siteCounter; i++) {
+          const domain = document.querySelector(`[name="domain-${i}"]`).value.replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
+          const email = document.querySelector(`[name="email-${i}"]`).value;
+          const token = document.querySelector(`[name="token-${i}"]`).value;
+          sites.push({ domain, email, token });
+        }
+
+        const res = await fetch('/api/stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sites })
+        });
+
+        const data = await res.json();
+        renderTable(data.results);
+      });
+
+      function renderTable(results) {
+        const metrics = [
+          ['projectCount', 'Projects'],
+          ['dashboardCount', 'Dashboards'],
+          ['boardCount', 'Boards'],
+          ['fieldCount', 'Custom Fields'],
+          ['filterCount', 'Filters'],
+          ['permissionSchemeCount', 'Permission Schemes'],
+          ['workflowCount', 'Workflows'],
+          ['workflowSchemeCount', 'Workflow Schemes'],
+          ['issueTypeCount', 'Issue Types'],
+          ['issueTypeSchemeCount', 'Issue Type Schemes']
+        ];
+
+        let html = '<tr><th>Resource</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
+
+        for (const [key, label] of metrics) {
+          html += `<tr><td>${label}</td>` + results.map(r => `<td>${r[key] ?? '-'}</td>`).join('') + '</tr>';
+        }
+
+        document.getElementById('stats-table').innerHTML = html;
+      }
+
+      addSiteInput();
+    </script>
+  </body>
+</html>
