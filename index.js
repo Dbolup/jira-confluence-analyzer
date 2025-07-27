@@ -96,18 +96,52 @@ app.post("/api/stats", async (req, res) => {
           return `❌ Error`;
         };
 
+        // Helper function to get complex object results
+        const getObjectValue = (result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          }
+          console.warn(`API call ${index} failed:`, result.reason?.message);
+          return { total: '❌ Error', active: '❌ Error', inactive: '❌ Error' };
+        };
+
+        const projects = getObjectValue(results[0], 'projects');
+        const customFields = getObjectValue(results[1], 'customFields');
+        const permissionSchemes = getObjectValue(results[2], 'permissionSchemes');
+        const workflowSchemes = getObjectValue(results[7], 'workflowSchemes');
+        const issueTypeSchemes = getObjectValue(results[9], 'issueTypeSchemes');
+
         return {
           domain,
-          projectCount: getValue(results[0], 'projects', []),
-          fieldCount: getValue(results[1], 'fields', []),
-          permissionSchemeCount: getValue(results[2], 'permissions'),
+          // Projects with active/archived breakdown
+          projectCount: projects.total || getValue(results[0], 'projects'),
+          projectsActive: projects.active || 0,
+          projectsArchived: projects.archived || 0,
+          
+          // Custom fields with duplicates analysis
+          fieldCount: customFields.total || getValue(results[1], 'fields'),
+          fieldsUnique: customFields.unique || 0,
+          fieldsDuplicated: customFields.duplicates || 0,
+          
+          // Schemes with active/inactive breakdown
+          permissionSchemeCount: permissionSchemes.total || getValue(results[2], 'permissions'),
+          permissionSchemesActive: permissionSchemes.active || 0,
+          permissionSchemesInactive: permissionSchemes.inactive || 0,
+          
+          workflowSchemeCount: workflowSchemes.total || getValue(results[7], 'workflowSchemes'),
+          workflowSchemesActive: workflowSchemes.active || 0,
+          workflowSchemesInactive: workflowSchemes.inactive || 0,
+          
+          issueTypeSchemeCount: issueTypeSchemes.total || getValue(results[9], 'issueTypeSchemes'),
+          issueTypeSchemesActive: issueTypeSchemes.active || 0,
+          issueTypeSchemesInactive: issueTypeSchemes.inactive || 0,
+          
+          // Keep the other metrics as simple counts for now
           filterCount: getValue(results[3], 'filters'),
           dashboardCount: getValue(results[4], 'dashboards'),
           boardCount: getValue(results[5], 'boards'),
           workflowCount: getValue(results[6], 'workflows'),
-          workflowSchemeCount: getValue(results[7], 'workflowSchemes'),
           issueTypeCount: getValue(results[8], 'issueTypes'),
-          issueTypeSchemeCount: getValue(results[9], 'issueTypeSchemes'),
           priorityCount: getValue(results[10], 'priorities'),
           prioritySchemeCount: getValue(results[11], 'prioritySchemes'),
           statusCount: getValue(results[12], 'statuses'),

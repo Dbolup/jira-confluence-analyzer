@@ -342,6 +342,21 @@
         color: #667eea;
       }
 
+      .active-good {
+        font-weight: 600;
+        color: #10b981;
+      }
+
+      .inactive-warning {
+        font-weight: 600;
+        color: #f59e0b;
+      }
+
+      .duplicate-warning {
+        font-weight: 600;
+        color: #ef4444;
+      }
+
       .error {
         color: #ef4444;
         font-weight: 500;
@@ -488,40 +503,110 @@
 
       function renderTable(results) {
         const metrics = [
-          ['boardCount', '📌 Boards'],
-          ['dashboardCount', '📊 Dashboards'],
-          ['fieldCount', '🏷️ Custom Fields'],
-          ['fieldConfigurationCount', '⚙️ Field Configurations'],
-          ['fieldConfigurationSchemeCount', '🔧 Field Configuration Schemes'],
-          ['filterCount', '🔍 Filters'],
-          ['issueSecuritySchemeCount', '🔒 Issue Security Schemes'],
-          ['issueTypeCount', '🎫 Issue Types'],
-          ['issueTypeSchemeCount', '📝 Issue Type Schemes'],
-          ['issueTypeScreenSchemeCount', '📱 Issue Type Screen Schemes'],
-          ['notificationSchemeCount', '📧 Notification Schemes'],
-          ['permissionSchemeCount', '🔐 Permission Schemes'],
-          ['priorityCount', '⭐ Priorities'],
-          ['prioritySchemeCount', '🎯 Priority Schemes'],
-          ['projectCount', '📋 Projects'],
-          ['resolutionCount', '🔄 Resolutions'],
-          ['screenCount', '🖥️ Screens'],
-          ['screenSchemeCount', '🖼️ Screen Schemes'],
-          ['statusCount', '📊 Statuses'],
-          ['workflowCount', '⚙️ Workflows'],
-          ['workflowSchemeCount', '🔄 Workflow Schemes']
+          // Projects with breakdown
+          { 
+            section: 'Projects', 
+            items: [
+              ['projectCount', '📋 Projects (Total)'],
+              ['projectsActive', '✅ Active Projects'],
+              ['projectsArchived', '📦 Archived Projects']
+            ]
+          },
+          
+          // Custom Fields with duplicates
+          {
+            section: 'Custom Fields',
+            items: [
+              ['fieldCount', '🏷️ Custom Fields (Total)'],
+              ['fieldsUnique', '✨ Unique Fields'],
+              ['fieldsDuplicated', '🔁 Duplicate Fields']
+            ]
+          },
+          
+          // Permission Schemes
+          {
+            section: 'Permission Schemes',
+            items: [
+              ['permissionSchemeCount', '🔐 Permission Schemes (Total)'],
+              ['permissionSchemesActive', '✅ Active Permission Schemes'],
+              ['permissionSchemesInactive', '❌ Inactive Permission Schemes']
+            ]
+          },
+          
+          // Workflow Schemes
+          {
+            section: 'Workflow Schemes',
+            items: [
+              ['workflowSchemeCount', '🔄 Workflow Schemes (Total)'],
+              ['workflowSchemesActive', '✅ Active Workflow Schemes'],
+              ['workflowSchemesInactive', '❌ Inactive Workflow Schemes']
+            ]
+          },
+          
+          // Issue Type Schemes
+          {
+            section: 'Issue Type Schemes',
+            items: [
+              ['issueTypeSchemeCount', '📝 Issue Type Schemes (Total)'],
+              ['issueTypeSchemesActive', '✅ Active Issue Type Schemes'],
+              ['issueTypeSchemesInactive', '❌ Inactive Issue Type Schemes']
+            ]
+          },
+          
+          // Other Resources
+          {
+            section: 'Other Resources',
+            items: [
+              ['boardCount', '📌 Boards'],
+              ['dashboardCount', '📊 Dashboards'],
+              ['fieldConfigurationCount', '⚙️ Field Configurations'],
+              ['fieldConfigurationSchemeCount', '🔧 Field Configuration Schemes'],
+              ['filterCount', '🔍 Filters'],
+              ['issueSecuritySchemeCount', '🔒 Issue Security Schemes'],
+              ['issueTypeCount', '🎫 Issue Types'],
+              ['issueTypeScreenSchemeCount', '📱 Issue Type Screen Schemes'],
+              ['notificationSchemeCount', '📧 Notification Schemes'],
+              ['priorityCount', '⭐ Priorities'],
+              ['prioritySchemeCount', '🎯 Priority Schemes'],
+              ['resolutionCount', '🔄 Resolutions'],
+              ['screenCount', '🖥️ Screens'],
+              ['screenSchemeCount', '🖼️ Screen Schemes'],
+              ['statusCount', '📊 Statuses'],
+              ['workflowCount', '⚙️ Workflows']
+            ]
+          }
         ];
 
         let html = '<tr><th>Resource</th>' + 
           results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
 
-        for (const [key, label] of metrics) {
-          html += `<tr><td>${label}</td>` + 
-            results.map(r => {
-              if (r.error) {
-                return `<td class="error">Error</td>`;
-              }
-              return `<td><span class="metric-value">${r[key] ?? '-'}</span></td>`;
-            }).join('') + '</tr>';
+        for (const metricGroup of metrics) {
+          // Add section header
+          html += `<tr><td colspan="${results.length + 1}" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; padding: 0.8rem;">${metricGroup.section}</td></tr>`;
+          
+          // Add metrics in this section
+          for (const [key, label] of metricGroup.items) {
+            html += `<tr><td>${label}</td>` + 
+              results.map(r => {
+                if (r.error) {
+                  return `<td class="error">Error</td>`;
+                }
+                
+                let value = r[key] ?? '-';
+                let cellClass = 'metric-value';
+                
+                // Color coding for insights
+                if (key.includes('Inactive') && value > 0) {
+                  cellClass += ' inactive-warning';
+                } else if (key.includes('Active') && value > 0) {
+                  cellClass += ' active-good';
+                } else if (key.includes('Duplicate') && value > 0) {
+                  cellClass += ' duplicate-warning';
+                }
+                
+                return `<td><span class="${cellClass}">${value}</span></td>`;
+              }).join('') + '</tr>';
+          }
         }
 
         document.getElementById('stats-table').innerHTML = html;
