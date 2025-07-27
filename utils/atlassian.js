@@ -111,7 +111,7 @@ export async function getPermissionSchemes({ headers, baseUrl }) {
     }
   }
 
-  const schemes = data.permissionSchemes || [];
+  const schemes = schemesData.permissionSchemes || [];
   const activeCount = schemes.filter(scheme => usedSchemeIds.has(scheme.id)).length;
   const inactiveCount = schemes.length - activeCount;
 
