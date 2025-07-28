@@ -88,38 +88,14 @@ export async function getCustomFields({ headers, baseUrl }) {
 }
 
 export async function getPermissionSchemes({ headers, baseUrl }) {
-  // Get permission schemes
-  const schemesResponse = await fetch(`${baseUrl}/permissionscheme`, { headers });
-  const schemesData = await schemesResponse.json();
+  const response = await fetch(`${baseUrl}/permissionscheme`, { headers });
+  const data = await response.json();
 
-  if (!schemesResponse.ok) {
-    throw new Error(`Permission schemes fetch failed: ${schemesResponse.status}`);
+  if (!response.ok) {
+    throw new Error(`Permission schemes fetch failed: ${response.status}`);
   }
 
-  // Get projects to check which schemes are in use
-  const projectsResponse = await fetch(`${baseUrl}/project/search?maxResults=1000`, { headers });
-  const projectsData = await projectsResponse.json();
-  
-  if (!projectsResponse.ok) {
-    throw new Error(`Projects fetch failed for permission schemes: ${projectsResponse.status}`);
-  }
-
-  const usedSchemeIds = new Set();
-  for (const project of projectsData.values || []) {
-    if (project.permissionScheme?.id) {
-      usedSchemeIds.add(project.permissionScheme.id);
-    }
-  }
-
-  const schemes = schemesData.permissionSchemes || [];
-  const activeCount = schemes.filter(scheme => usedSchemeIds.has(scheme.id)).length;
-  const inactiveCount = schemes.length - activeCount;
-
-  return {
-    total: schemes.length,
-    active: activeCount,
-    inactive: inactiveCount
-  };
+  return (data.permissionSchemes || []).length;
 }
 
 export async function getFilters({ headers, baseUrl }) {
@@ -211,7 +187,7 @@ export async function getWorkflowSchemes({ headers, baseUrl }) {
   // Get projects to check which workflow schemes are in use
   const projectsResponse = await fetch(`${baseUrl}/project/search?maxResults=1000`, { headers });
   const projectsData = await projectsResponse.json();
-  
+
   if (!projectsResponse.ok) {
     throw new Error(`Projects fetch failed for workflow schemes: ${projectsResponse.status}`);
   }
@@ -270,7 +246,7 @@ export async function getIssueTypeSchemes({ headers, baseUrl }) {
   // Get projects to check which issue type schemes are in use
   const projectsResponse = await fetch(`${baseUrl}/project/search?maxResults=1000`, { headers });
   const projectsData = await projectsResponse.json();
-  
+
   if (!projectsResponse.ok) {
     throw new Error(`Projects fetch failed for issue type schemes: ${projectsResponse.status}`);
   }
