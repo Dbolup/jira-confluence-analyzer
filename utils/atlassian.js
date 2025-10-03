@@ -143,7 +143,7 @@ export async function getBoards({ headers, agileBaseUrl }) {
   let total = 0;
 
   while (true) {
-    const res = await fetch(`${agileBaseUrl}/board?startAt=${startAt}&maxResults=${maxResults}`, {
+    const res = await fetch(`${agileBaseUrl}/board?startAt=${startAt}&maxResults=${maxResults}&includePrivate=true`, {
       headers,
     });
 
