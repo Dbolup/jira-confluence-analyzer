@@ -177,11 +177,26 @@ export async function getWorkflows({ headers, baseUrl }) {
 }
 
 export async function getWorkflowSchemes({ headers, baseUrl }) {
-  const res = await fetch(`${baseUrl}/workflowscheme`, { headers });
-  const data = await res.json();
+  let startAt = 0;
+  const maxResults = 50;
+  const allSchemes = [];
 
-  if (!res.ok) {
-    throw new Error(`Workflow Schemes fetch failed: ${res.status}`);
+  // Paginate through all workflow schemes
+  while (true) {
+    const res = await fetch(`${baseUrl}/workflowscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`Workflow Schemes fetch failed: ${res.status}`);
+    }
+
+    allSchemes.push(...(data.values || []));
+
+    if (data.isLast || (data.values || []).length < maxResults) {
+      break;
+    }
+
+    startAt += maxResults;
   }
 
   // Get projects to check which workflow schemes are in use
@@ -199,12 +214,11 @@ export async function getWorkflowSchemes({ headers, baseUrl }) {
     }
   }
 
-  const schemes = data.values || [];
-  const activeCount = schemes.filter(scheme => usedSchemeIds.has(scheme.id)).length;
-  const inactiveCount = schemes.length - activeCount;
+  const activeCount = allSchemes.filter(scheme => usedSchemeIds.has(scheme.id)).length;
+  const inactiveCount = allSchemes.length - activeCount;
 
   return {
-    total: schemes.length,
+    total: allSchemes.length,
     active: activeCount,
     inactive: inactiveCount
   };
