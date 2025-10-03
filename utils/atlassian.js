@@ -89,12 +89,13 @@ export async function getCustomFields({ headers, baseUrl }) {
 
 export async function getPermissionSchemes({ headers, baseUrl }) {
   const response = await fetch(`${baseUrl}/permissionscheme`, { headers });
-  const data = await response.json();
-
+  
   if (!response.ok) {
-    throw new Error(`Permission schemes fetch failed: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`Permission schemes fetch failed (${response.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await response.json();
   return (data.permissionSchemes || []).length;
 }
 
@@ -167,12 +168,13 @@ export async function getBoards({ headers, agileBaseUrl }) {
 
 export async function getWorkflows({ headers, baseUrl }) {
   const res = await fetch(`${baseUrl}/workflow/search`, { headers });
-  const data = await res.json();
-
+  
   if (!res.ok) {
-    throw new Error(`Workflows fetch failed: ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`Workflows fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await res.json();
   return data.total || 0;
 }
 
@@ -184,11 +186,13 @@ export async function getWorkflowSchemes({ headers, baseUrl }) {
   // Paginate through all workflow schemes
   while (true) {
     const res = await fetch(`${baseUrl}/workflowscheme?startAt=${startAt}&maxResults=${maxResults}`, { headers });
-    const data = await res.json();
-
+    
     if (!res.ok) {
-      throw new Error(`Workflow Schemes fetch failed: ${res.status}`);
+      const errorText = await res.text();
+      throw new Error(`Workflow Schemes fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
     }
+
+    const data = await res.json();
 
     allSchemes.push(...(data.values || []));
 
@@ -226,12 +230,13 @@ export async function getWorkflowSchemes({ headers, baseUrl }) {
 
 export async function getIssueTypes({ headers, baseUrl }) {
   const res = await fetch(`${baseUrl}/issuetype`, { headers });
-  const data = await res.json();
-
+  
   if (!res.ok) {
-    throw new Error(`Issue Types fetch failed: ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`Issue Types fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await res.json();
   return data.length;
 }
 
@@ -284,12 +289,13 @@ export async function getIssueTypeSchemes({ headers, baseUrl }) {
 
 export async function getPriorities({ headers, baseUrl }) {
   const res = await fetch(`${baseUrl}/priority`, { headers });
-  const data = await res.json();
-
+  
   if (!res.ok) {
-    throw new Error(`Priorities fetch failed: ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`Priorities fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await res.json();
   return data.length;
 }
 
@@ -306,12 +312,13 @@ export async function getPrioritySchemes({ headers, baseUrl }) {
 
 export async function getStatuses({ headers, baseUrl }) {
   const res = await fetch(`${baseUrl}/status`, { headers });
-  const data = await res.json();
-
+  
   if (!res.ok) {
-    throw new Error(`Statuses fetch failed: ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`Statuses fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await res.json();
   return data.length;
 }
 
@@ -437,11 +444,12 @@ export async function getFieldConfigurationSchemes({ headers, baseUrl }) {
 
 export async function getResolutions({ headers, baseUrl }) {
   const res = await fetch(`${baseUrl}/resolution`, { headers });
-  const data = await res.json();
-
+  
   if (!res.ok) {
-    throw new Error(`Resolutions fetch failed: ${res.status}`);
+    const errorText = await res.text();
+    throw new Error(`Resolutions fetch failed (${res.status}): ${errorText.substring(0, 200)}`);
   }
 
+  const data = await res.json();
   return data.length;
 }
