@@ -326,9 +326,9 @@ app.post("/api/compare-projects", async (req, res) => {
       };
 
       try {
-        // Get issue count for the project using v3 API
+        // Get issue count for the project using approximate-count API
         const jqlQuery = `project = ${project.key}`;
-        const searchUrl = `${baseUrl}/search/jql`;
+        const searchUrl = `${baseUrl}/search/approximate-count`;
         
         const response = await fetch(searchUrl, {
           method: 'POST',
@@ -337,9 +337,7 @@ app.post("/api/compare-projects", async (req, res) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            jql: jqlQuery,
-            maxResults: 1,
-            fields: []
+            jql: jqlQuery
           })
         });
         
@@ -354,7 +352,7 @@ app.post("/api/compare-projects", async (req, res) => {
           domain,
           name: project.name,
           key: project.key,
-          issueCount: data.total || 0
+          issueCount: data.count || 0
         };
       } catch (e) {
         return { 
