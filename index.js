@@ -338,7 +338,7 @@ app.post("/api/compare-projects", async (req, res) => {
           },
           body: JSON.stringify({
             jql: jqlQuery,
-            maxResults: 0,
+            maxResults: 1,
             fields: []
           })
         });
