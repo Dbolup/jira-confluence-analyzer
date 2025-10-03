@@ -3,6 +3,7 @@ import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -45,6 +46,10 @@ app.get("/", (req, res) => {
 
 app.get("/insights", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "insights.html"));
+});
+
+app.get("/compare", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "compare.html"));
 });
 
 // Simple stats endpoint (just counts)
@@ -258,6 +263,95 @@ app.post("/api/insights", async (req, res) => {
         };
       } catch (e) {
         return { domain, error: e.message };
+      }
+    })
+  );
+
+  res.json({ results });
+});
+
+// Projects endpoint - fetches projects from sites
+app.post("/api/projects", async (req, res) => {
+  const sites = req.body.sites;
+  if (!Array.isArray(sites)) {
+    return res.status(400).json({ error: "Expected 'sites' to be an array" });
+  }
+
+  const results = await Promise.all(
+    sites.map(async (site) => {
+      const { email, token, domain } = site;
+
+      const baseUrl = `https://${domain}.atlassian.net/rest/api/3`;
+      const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`;
+
+      const headers = {
+        Authorization: authHeader,
+        Accept: "application/json",
+      };
+
+      try {
+        const projectsResult = await getProjects({ headers, baseUrl });
+        
+        return {
+          domain,
+          projects: projectsResult.projects || []
+        };
+      } catch (e) {
+        return { domain, error: e.message };
+      }
+    })
+  );
+
+  res.json({ results });
+});
+
+// Compare projects endpoint
+app.post("/api/compare-projects", async (req, res) => {
+  const projects = req.body.projects;
+  if (!Array.isArray(projects)) {
+    return res.status(400).json({ error: "Expected 'projects' to be an array" });
+  }
+
+  const results = await Promise.all(
+    projects.map(async (item) => {
+      const { domain, site, project } = item;
+      const { email, token } = site;
+
+      const baseUrl = `https://${domain}.atlassian.net/rest/api/3`;
+      const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`;
+
+      const headers = {
+        Authorization: authHeader,
+        Accept: "application/json",
+      };
+
+      try {
+        // Get issue count for the project
+        const jqlQuery = `project = ${project.key}`;
+        const searchUrl = `${baseUrl}/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=0`;
+        
+        const response = await fetch(searchUrl, { headers });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch issues (${response.status}): ${errorText.substring(0, 200)}`);
+        }
+        
+        const data = await response.json();
+        
+        return {
+          domain,
+          name: project.name,
+          key: project.key,
+          issueCount: data.total || 0
+        };
+      } catch (e) {
+        return { 
+          domain, 
+          name: project.name,
+          key: project.key,
+          error: e.message 
+        };
       }
     })
   );
