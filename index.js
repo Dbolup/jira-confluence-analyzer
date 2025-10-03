@@ -326,11 +326,22 @@ app.post("/api/compare-projects", async (req, res) => {
       };
 
       try {
-        // Get issue count for the project
+        // Get issue count for the project using v3 API
         const jqlQuery = `project = ${project.key}`;
-        const searchUrl = `${baseUrl}/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=0`;
+        const searchUrl = `${baseUrl}/search/jql`;
         
-        const response = await fetch(searchUrl, { headers });
+        const response = await fetch(searchUrl, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            jql: jqlQuery,
+            maxResults: 0,
+            fields: []
+          })
+        });
         
         if (!response.ok) {
           const errorText = await response.text();
