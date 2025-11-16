@@ -9,7 +9,7 @@ export async function getProjects({ headers, baseUrl }) {
 
   while (true) {
     const response = await fetch(
-      `${baseUrl}/project/search?startAt=${startAt}&maxResults=${maxResults}`,
+      `${baseUrl}/project/search?startAt=${startAt}&maxResults=${maxResults}&expand=lead,insight`,
       { headers },
     );
 
@@ -26,6 +26,7 @@ export async function getProjects({ headers, baseUrl }) {
       type: project.projectTypeKey,
       lead: project.lead?.displayName || "Unknown",
       archived: project.archived || false,
+      issueCount: project.insight?.totalIssueCount || 0,
     }));
 
     allProjects.push(...projects);

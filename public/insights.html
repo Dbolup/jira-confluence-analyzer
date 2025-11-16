@@ -469,6 +469,13 @@
       let siteCounter = 0;
 
       function addSiteInput() {
+        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
+        if (!savedCreds) {
+          alert('Please setup your credentials first!');
+          window.location.href = '/credentials';
+          return;
+        }
+
         const container = document.getElementById('site-inputs');
         const div = document.createElement('div');
         div.className = 'site-block';
@@ -480,19 +487,8 @@
             <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
           </div>
 
-          <div class="input-group">
-            <label>📧 Email</label>
-            <input type="email" name="email-${siteCounter}" placeholder="your.email@company.com" required />
-          </div>
-
-          <div class="input-group">
-            <label>🔑 API Token</label>
-            <input type="password" name="token-${siteCounter}" placeholder="Your API token" required />
-          </div>
-
-          <div class="checkbox-container">
-            <input type="checkbox" id="reuse-${siteCounter}" onchange="reuseCreds(this, ${siteCounter})">
-            <label for="reuse-${siteCounter}">🔄 Reuse credentials from Site 1</label>
+          <div id="creds-info-${siteCounter}" class="checkbox-container" style="background: #e0f2fe; border: 1px solid #0891b2; margin-bottom: 1rem;">
+            <span style="color: #0891b2; font-weight: 600;">✅ Using saved credentials</span>
           </div>
         `;
 
@@ -500,15 +496,7 @@
         siteCounter++;
       }
 
-      function reuseCreds(checkbox, index) {
-        if (!checkbox.checked || index === 0) return;
-        const email = document.querySelector('[name="email-0"]')?.value;
-        const token = document.querySelector('[name="token-0"]')?.value;
-        if (email && token) {
-          document.querySelector(`[name="email-${index}"]`).value = email;
-          document.querySelector(`[name="token-${index}"]`).value = token;
-        }
-      }
+
 
       document.getElementById('site-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -518,15 +506,14 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="loading"></span>Analyzing...';
 
+        const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const sites = [];
         for (let i = 0; i < siteCounter; i++) {
           const domain = document.querySelector(`[name="domain-${i}"]`).value
             .replace(/^https?:\/\//, '')
             .replace(/\/$/, '')
             .replace('.atlassian.net', '');
-          const email = document.querySelector(`[name="email-${i}"]`).value;
-          const token = document.querySelector(`[name="token-${i}"]`).value;
-          sites.push({ domain, email, token });
+          sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
         }
 
         try {
@@ -873,8 +860,6 @@
               if (index > 0) addSiteInput(); // Add extra inputs if needed
               
               document.querySelector(`[name="domain-${index}"]`).value = site.domain;
-              document.querySelector(`[name="email-${index}"]`).value = site.email;
-              document.querySelector(`[name="token-${index}"]`).value = site.token;
             });
           } catch (e) {
             console.warn('Failed to load stored credentials:', e);

@@ -414,6 +414,7 @@
       <h1>Atlassian Site Stats</h1>
       
       <div class="nav-buttons">
+        <a href="/credentials" class="nav-btn inactive">🔑 Setup Credentials</a>
         <div class="nav-btn active">📊 Basic Stats</div>
         <a href="/insights" class="nav-btn inactive">🔍 Detailed Insights</a>
         <a href="/compare" class="nav-btn inactive">🔄 Compare Projects</a>
@@ -454,6 +455,13 @@
       let siteCounter = 0;
 
       function addSiteInput() {
+        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
+        if (!savedCreds) {
+          alert('Please setup your credentials first!');
+          window.location.href = '/credentials';
+          return;
+        }
+
         const container = document.getElementById('site-inputs');
         const div = document.createElement('div');
         div.className = 'site-block';
@@ -465,19 +473,8 @@
             <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
           </div>
 
-          <div class="input-group">
-            <label>📧 Email</label>
-            <input type="email" name="email-${siteCounter}" placeholder="your.email@company.com" required />
-          </div>
-
-          <div class="input-group">
-            <label>🔑 API Token</label>
-            <input type="password" name="token-${siteCounter}" placeholder="Your API token" required />
-          </div>
-
-          <div class="checkbox-container">
-            <input type="checkbox" id="reuse-${siteCounter}" onchange="reuseCreds(this, ${siteCounter})">
-            <label for="reuse-${siteCounter}">🔄 Reuse credentials from Site 1</label>
+          <div id="creds-info-${siteCounter}" class="checkbox-container" style="background: #e0f2fe; border: 1px solid #0891b2; margin-bottom: 1rem;">
+            <span style="color: #0891b2; font-weight: 600;">✅ Using saved credentials</span>
           </div>
         `;
 
@@ -503,15 +500,14 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="loading"></span>Loading...';
 
+        const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const sites = [];
         for (let i = 0; i < siteCounter; i++) {
           const domain = document.querySelector(`[name="domain-${i}"]`).value
             .replace(/^https?:\/\//, '')
             .replace(/\/$/, '')
             .replace('.atlassian.net', '');
-          const email = document.querySelector(`[name="email-${i}"]`).value;
-          const token = document.querySelector(`[name="token-${i}"]`).value;
-          sites.push({ domain, email, token });
+          sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
         }
 
         try {
@@ -752,13 +748,12 @@
 
       // Function to go to detailed insights with current credentials
       function goToDetailedInsights() {
+        const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const sites = [];
         for (let i = 0; i < siteCounter; i++) {
           const domain = document.querySelector(`[name="domain-${i}"]`)?.value;
-          const email = document.querySelector(`[name="email-${i}"]`)?.value;
-          const token = document.querySelector(`[name="token-${i}"]`)?.value;
-          if (domain && email && token) {
-            sites.push({ domain, email, token });
+          if (domain) {
+            sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
           }
         }
         

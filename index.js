@@ -52,6 +52,10 @@ app.get("/compare", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "compare.html"));
 });
 
+app.get("/credentials", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "credentials.html"));
+});
+
 // Simple stats endpoint (just counts)
 app.post("/api/stats", async (req, res) => {
   const sites = req.body.sites;
@@ -326,39 +330,65 @@ app.post("/api/compare-projects", async (req, res) => {
       };
 
       try {
-        // Get issue count for the project using approximate-count API
-        const jqlQuery = `project = ${project.key}`;
-        const searchUrl = `${baseUrl}/search/approximate-count`;
+        // Fetch all project data in parallel
+        const [componentsRes, issueTypeSchemeRes, permissionSchemeRes, notificationSchemeRes, statusesRes] = await Promise.allSettled([
+          // Components
+          fetch(`${baseUrl}/project/${project.key}/components`, { headers }),
+          // Issue Type Scheme
+          fetch(`${baseUrl}/issuetypescheme/project?projectId=${project.id}`, { headers }),
+          // Permission Scheme
+          fetch(`${baseUrl}/project/${project.key}/permissionscheme`, { headers }),
+          // Notification Scheme
+          fetch(`${baseUrl}/project/${project.key}/notificationscheme`, { headers }),
+          // Statuses
+          fetch(`${baseUrl}/project/${project.key}/statuses`, { headers })
+        ]);
+
+        // Helper to safely get data
+        const getData = async (result, defaultValue = null) => {
+          if (result.status === 'fulfilled' && result.value.ok) {
+            return await result.value.json();
+          }
+          return defaultValue;
+        };
+
+        const componentsData = await getData(componentsRes, []);
+        const issueTypeSchemeData = await getData(issueTypeSchemeRes, { values: [] });
+        const permissionSchemeData = await getData(permissionSchemeRes, {});
+        const notificationSchemeData = await getData(notificationSchemeRes, {});
+        const statusesData = await getData(statusesRes, []);
+
+        // Find the issue type scheme for this project
+        const projectScheme = issueTypeSchemeData?.values?.find(scheme => 
+          scheme.projectIds?.includes(project.id)
+        );
+
+        // Extract unique statuses names from nested structure
+        const uniqueStatuses = statusesData && Array.isArray(statusesData) ? 
+          [...new Set(statusesData.flatMap(issueType => 
+            issueType.statuses ? issueType.statuses.map(status => status.name) : []
+          ))].sort() : [];
         
-        const response = await fetch(searchUrl, {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            jql: jqlQuery
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch issues (${response.status}): ${errorText.substring(0, 200)}`);
-        }
-        
-        const data = await response.json();
-        
+        const statusNames = uniqueStatuses.length > 0 ? uniqueStatuses.join(', ') : 'N/A';
+
         return {
           domain,
           name: project.name,
           key: project.key,
-          issueCount: data.count || 0
+          lead: project.lead || 'N/A',
+          issueCount: project.issueCount || 0,
+          componentCount: Array.isArray(componentsData) ? componentsData.length : 0,
+          issueTypeScheme: projectScheme?.issueTypeScheme?.name || 'N/A',
+          permissionScheme: permissionSchemeData?.name || 'N/A',
+          notificationScheme: notificationSchemeData?.name || 'N/A',
+          statuses: statusNames
         };
       } catch (e) {
         return { 
           domain, 
           name: project.name,
           key: project.key,
+          lead: project.lead || 'N/A',
           error: e.message 
         };
       }

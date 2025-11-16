@@ -183,10 +183,22 @@
         transition: all 0.3s ease;
       }
 
+      .btn-add {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        flex: 1;
+      }
+
+      .btn-add:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      }
+
       .btn-submit {
         background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
-        flex: 1;
+        flex: 2;
       }
 
       .btn-submit:hover {
@@ -239,9 +251,10 @@
 
       th, td {
         text-align: left;
-        padding: 1.2rem;
+        padding: 1rem 0.8rem;
         border-bottom: 1px solid #f1f5f9;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        vertical-align: top;
       }
 
       th {
@@ -266,6 +279,9 @@
       .metric-value {
         font-weight: 500;
         color: #667eea;
+        word-break: break-word;
+        max-width: 200px;
+        display: inline-block;
       }
 
       .error {
@@ -304,19 +320,23 @@
       <h1>Project Comparison</h1>
       
       <div class="nav-buttons">
+        <a href="/credentials" class="nav-btn inactive">🔑 Setup Credentials</a>
         <a href="/" class="nav-btn inactive">📊 Basic Stats</a>
         <a href="/insights" class="nav-btn inactive">🔍 Detailed Insights</a>
         <div class="nav-btn active">🔄 Compare Projects</div>
       </div>
 
-      <form class="site-form" id="site-form">
+      <div class="site-form">
         <div id="site-inputs"></div>
         <div class="button-group">
-          <button type="submit" class="btn-submit" id="load-btn">
+          <button type="button" class="btn-add" onclick="addSiteInput()">
+            ➕ Add Site
+          </button>
+          <button type="button" class="btn-submit" id="load-btn" onclick="loadProjects()">
             📂 Load Projects
           </button>
         </div>
-      </form>
+      </div>
 
       <div id="project-selection" style="display: none;">
         <h2 style="color: #374151; margin-bottom: 1.5rem;">Select Projects to Compare</h2>
@@ -339,9 +359,17 @@
       let projectsData = {};
 
       function addSiteInput() {
+        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
+        if (!savedCreds) {
+          alert('Please setup your credentials first!');
+          window.location.href = '/credentials';
+          return;
+        }
+
         const container = document.getElementById('site-inputs');
         const div = document.createElement('div');
         div.className = 'site-block';
+        div.style.animation = 'slideUp 0.4s ease-out';
 
         div.innerHTML = `
           <div class="input-group">
@@ -349,14 +377,8 @@
             <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
           </div>
 
-          <div class="input-group">
-            <label>📧 Email</label>
-            <input type="email" name="email-${siteCounter}" placeholder="your.email@company.com" required />
-          </div>
-
-          <div class="input-group">
-            <label>🔑 API Token</label>
-            <input type="password" name="token-${siteCounter}" placeholder="Your API token" required />
+          <div class="checkbox-container" style="background: #e0f2fe; border: 1px solid #0891b2; margin-bottom: 1rem;">
+            <span style="color: #0891b2; font-weight: 600;">✅ Using saved credentials</span>
           </div>
         `;
 
@@ -364,23 +386,36 @@
         siteCounter++;
       }
 
-      document.getElementById('site-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+      async function loadProjects() {
+        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
+        if (!savedCreds) {
+          alert('Please setup your credentials first!');
+          window.location.href = '/credentials';
+          return;
+        }
+
+        if (siteCounter === 0) {
+          alert('Please add at least one site!');
+          return;
+        }
+
         const loadBtn = document.getElementById('load-btn');
         const originalText = loadBtn.innerHTML;
 
         loadBtn.disabled = true;
         loadBtn.innerHTML = '<span class="loading"></span>Loading Projects...';
 
+        const creds = JSON.parse(savedCreds);
         sitesData = [];
         for (let i = 0; i < siteCounter; i++) {
-          const domain = document.querySelector(`[name="domain-${i}"]`).value
-            .replace(/^https?:\/\//, '')
-            .replace(/\/$/, '')
-            .replace('.atlassian.net', '');
-          const email = document.querySelector(`[name="email-${i}"]`).value;
-          const token = document.querySelector(`[name="token-${i}"]`).value;
-          sitesData.push({ domain, email, token });
+          const domainInput = document.querySelector(`[name="domain-${i}"]`);
+          if (domainInput && domainInput.value) {
+            const domain = domainInput.value
+              .replace(/^https?:\/\//, '')
+              .replace(/\/$/, '')
+              .replace('.atlassian.net', '');
+            sitesData.push({ domain, email: creds.email, token: creds.token });
+          }
         }
 
         try {
@@ -400,7 +435,7 @@
           loadBtn.disabled = false;
           loadBtn.innerHTML = originalText;
         }
-      });
+      }
 
       function renderProjectSelectors(data) {
         const container = document.getElementById('project-selectors');
@@ -408,49 +443,83 @@
 
         data.results.forEach((siteData, index) => {
           const div = document.createElement('div');
-          div.className = 'input-group';
+          div.className = 'site-block';
+          div.style.animation = 'slideUp 0.4s ease-out';
           
-          let options = '<option value="">-- Select a project --</option>';
-          if (siteData.projects && siteData.projects.length > 0) {
-            options += siteData.projects.map(p => 
-              `<option value="${p.key}">${p.name} (${p.key})</option>`
-            ).join('');
+          let checkboxes = '';
+          if (siteData.error) {
+            checkboxes = '<div style="color: #ef4444;">❌ Error loading projects</div>';
+          } else if (siteData.projects && siteData.projects.length > 0) {
+            checkboxes = siteData.projects
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(p => `
+                <div style="margin: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="checkbox" id="project-${index}-${p.key}" value="${p.key}" style="accent-color: #667eea;">
+                  <label for="project-${index}-${p.key}" style="margin: 0; cursor: pointer; flex: 1;">${p.name} (${p.key}) - ${p.issueCount.toLocaleString()} issues</label>
+                </div>
+              `).join('');
+          } else {
+            checkboxes = '<div style="color: #64748b;">No projects found</div>';
           }
 
           div.innerHTML = `
-            <label>📋 ${siteData.domain}</label>
-            <select id="project-select-${index}">
-              ${options}
-            </select>
+            <div class="input-group">
+              <label>📋 ${siteData.domain} - Select Projects</label>
+              <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; background: #fafafa;">
+                ${checkboxes}
+              </div>
+              <div style="margin-top: 0.5rem;">
+                <button type="button" onclick="selectAllProjects(${index})" style="padding: 0.3rem 0.8rem; margin-right: 0.5rem; font-size: 0.8rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Select All</button>
+                <button type="button" onclick="clearAllProjects(${index})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">Clear All</button>
+              </div>
+            </div>
+            ${siteData.projects ? `<div style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">Found ${siteData.projects.length} projects</div>` : ''}
           `;
           
           container.appendChild(div);
         });
       }
 
+      function selectAllProjects(siteIndex) {
+        const checkboxes = document.querySelectorAll(`input[id^="project-${siteIndex}-"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+      }
+
+      function clearAllProjects(siteIndex) {
+        const checkboxes = document.querySelectorAll(`input[id^="project-${siteIndex}-"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+      }
+
       async function compareProjects() {
         const selectedProjects = [];
         
         projectsData.results.forEach((siteData, index) => {
-          const select = document.getElementById(`project-select-${index}`);
-          const projectKey = select.value;
+          const checkboxes = document.querySelectorAll(`input[id^="project-${index}-"]:checked`);
           
-          if (projectKey) {
-            const project = siteData.projects.find(p => p.key === projectKey);
-            if (project) {
-              selectedProjects.push({
-                domain: siteData.domain,
-                site: sitesData[index],
-                project: project
-              });
+          checkboxes.forEach(checkbox => {
+            const projectKey = checkbox.value;
+            if (siteData.projects) {
+              const project = siteData.projects.find(p => p.key === projectKey);
+              if (project) {
+                selectedProjects.push({
+                  domain: siteData.domain,
+                  site: sitesData[index],
+                  project: project
+                });
+              }
             }
-          }
+          });
         });
 
         if (selectedProjects.length === 0) {
           alert('Please select at least one project to compare');
           return;
         }
+
+        const compareBtn = event.target;
+        const originalText = compareBtn.innerHTML;
+        compareBtn.disabled = true;
+        compareBtn.innerHTML = '<span class="loading"></span>Comparing...';
 
         try {
           const res = await fetch('/api/compare-projects', {
@@ -464,6 +533,9 @@
           document.getElementById('comparison-container').classList.add('show');
         } catch (error) {
           alert('Error comparing projects: ' + error.message);
+        } finally {
+          compareBtn.disabled = false;
+          compareBtn.innerHTML = originalText;
         }
       }
 
@@ -471,26 +543,100 @@
         const metrics = [
           ['name', '📝 Project Name'],
           ['key', '🔑 Project Key'],
-          ['issueCount', '🎫 Number of Issues']
+          ['lead', '👤 Project Lead'],
+          ['issueCount', '🎫 Number of Issues'],
+          ['componentCount', '🧩 Number of Components'],
+          ['issueTypeScheme', '📋 Issue Type Scheme'],
+          ['permissionScheme', '🔐 Permission Scheme'],
+          ['notificationScheme', '📧 Notification Scheme'],
+          ['statuses', '📊 Project Statuses']
         ];
 
-        let html = '<tr><th>Metric</th>' + 
-          results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
+        // Group results by domain
+        const groupedResults = {};
+        results.forEach(r => {
+          if (!groupedResults[r.domain]) {
+            groupedResults[r.domain] = [];
+          }
+          groupedResults[r.domain].push(r);
+        });
 
-        for (const [key, label] of metrics) {
-          html += `<tr><td class="metric-label">${label}</td>` + 
-            results.map(r => {
-              if (r.error) {
-                return `<td class="error">${r.error}</td>`;
+        const sites = Object.keys(groupedResults);
+        
+        // Build header row with sites
+        let html = '<tr><th></th>';
+        sites.forEach(site => {
+          html += `<th style="text-align: center; background: linear-gradient(135deg, #667eea, #764ba2);">${site}</th>`;
+        });
+        html += '</tr>';
+
+        // Find max projects per site to determine how many project rows we need
+        const maxProjects = Math.max(...Object.values(groupedResults).map(projects => projects.length));
+        
+        // Create rows for each project number
+        for (let projectIndex = 0; projectIndex < maxProjects; projectIndex++) {
+          // Project header row
+          html += '<tr>';
+          html += `<td class="metric-label" style="background: #f1f5f9;">Project ${projectIndex + 1}</td>`;
+          sites.forEach(site => {
+            const project = groupedResults[site][projectIndex];
+            if (project) {
+              html += `<td style="font-weight: 600; background: #f8fafc; text-align: center;">${project.name} (${project.key})</td>`;
+            } else {
+              html += '<td style="background: #f8fafc;">-</td>';
+            }
+          });
+          html += '</tr>';
+          
+          // Metric rows for this project
+          metrics.forEach(([key, label]) => {
+            html += '<tr>';
+            html += `<td class="metric-label" style="padding-left: 2rem;">${label}</td>`;
+            
+            sites.forEach(site => {
+              const project = groupedResults[site][projectIndex];
+              if (project) {
+                if (project.error) {
+                  html += `<td class="error">❌ Error</td>`;
+                } else {
+                  let value = project[key] ?? 'N/A';
+                  if (key === 'issueCount' && typeof value === 'number') {
+                    value = value.toLocaleString();
+                  }
+                  
+                  // Handle long status lists
+                  if (key === 'statuses') {
+                    const statusArray = value.split(', ');
+                    if (statusArray.length > 10) {
+                      const remaining = statusArray.length - 10;
+                      value = `${statusArray.slice(0, 10).join(', ')} <span class="show-more" onclick="toggleStatuses(this, '${project.allStatuses}')" style="color: #667eea; cursor: pointer; text-decoration: underline;">+${remaining} more</span>`;
+                    }
+                  }
+                  
+                  html += `<td><span class="metric-value" title="${value}">${value}</span></td>`;
+                }
+              } else {
+                html += '<td>-</td>';
               }
-              
-              let value = r[key] ?? '-';
-              
-              return `<td><span class="metric-value">${value}</span></td>`;
-            }).join('') + '</tr>';
+            });
+            
+            html += '</tr>';
+          });
+          
+          // Add spacing row between projects
+          if (projectIndex < maxProjects - 1) {
+            html += '<tr style="height: 10px;"><td colspan="' + (sites.length + 1) + '" style="background: #f9fafb; border: none;"></td></tr>';
+          }
         }
 
         document.getElementById('comparison-table').innerHTML = html;
+      }
+
+      function toggleStatuses(element, allStatuses) {
+        const cell = element.parentElement;
+        if (element.textContent.includes('more')) {
+          cell.innerHTML = `<span class="metric-value">${allStatuses} <span class="show-less" onclick="location.reload()" style="color: #667eea; cursor: pointer; text-decoration: underline;">show less</span></span>`;
+        }
       }
 
       // Load credentials from sessionStorage if available
@@ -502,9 +648,12 @@
             sites.forEach((site, index) => {
               if (index > 0) addSiteInput();
               
-              document.querySelector(`[name="domain-${index}"]`).value = site.domain;
-              document.querySelector(`[name="email-${index}"]`).value = site.email;
-              document.querySelector(`[name="token-${index}"]`).value = site.token;
+              setTimeout(() => {
+                const domainInput = document.querySelector(`[name="domain-${index}"]`);
+                if (domainInput) {
+                  domainInput.value = site.domain;
+                }
+              }, 100);
             });
           } catch (e) {
             console.warn('Failed to load stored credentials:', e);
@@ -516,7 +665,7 @@
       addSiteInput();
       
       // Load stored credentials
-      setTimeout(loadStoredCredentials, 100);
+      setTimeout(loadStoredCredentials, 200);
     </script>
   </body>
 </html>
