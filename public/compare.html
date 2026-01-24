@@ -1,671 +1,181 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project Comparison</title>
+    <title>Jira Project Comparison</title>
     <style>
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #1c1e21;
-        padding: 2rem;
-        min-height: 100vh;
-        position: relative;
-      }
-
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
-        pointer-events: none;
-        z-index: -1;
-      }
-
-      .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        padding: 3rem;
-        animation: slideUp 0.6s ease-out;
-      }
-
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      h1 {
-        font-weight: 700;
-        font-size: 2.5rem;
-        text-align: center;
-        margin-bottom: 1rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        position: relative;
-      }
-
-      h1::after {
-        content: '';
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80px;
-        height: 4px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border-radius: 2px;
-      }
-
-      .nav-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-bottom: 3rem;
-      }
-
-      .nav-btn {
-        padding: 0.8rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border: none;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-      }
-
-      .nav-btn.active {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-      }
-
-      .nav-btn.inactive {
-        background: #f1f5f9;
-        color: #64748b;
-      }
-
-      .nav-btn.inactive:hover {
-        background: #e2e8f0;
-        transform: translateY(-2px);
-      }
-
-      .site-form {
-        display: flex;
-        flex-direction: column;
-        margin-bottom: 3rem;
-      }
-
-      .site-block {
-        background: white;
-        border: 2px solid #f0f0f0;
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-      }
-
-      .site-block:hover {
-        border-color: #667eea;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
-      }
-
-      .input-group {
-        margin-bottom: 1.5rem;
-      }
-
-      label {
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #374151;
-        display: block;
-        margin-bottom: 0.5rem;
-      }
-
-      input[type="text"],
-      input[type="email"],
-      input[type="password"],
-      select {
-        width: 100%;
-        padding: 1rem;
-        font-size: 1rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        background: #fafafa;
-      }
-
-      input:focus,
-      select:focus {
-        outline: none;
-        border-color: #667eea;
-        background: white;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-
-      .button-group {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-      }
-
-      button {
-        padding: 1rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border: none;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
-
-      .btn-add {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        flex: 1;
-      }
-
-      .btn-add:hover {
-        background: linear-gradient(135deg, #059669, #047857);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-      }
-
-      .btn-submit {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        flex: 2;
-      }
-
-      .btn-submit:hover {
-        background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-      }
-
-      .btn-submit:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .loading {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid rgba(255,255,255,.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-        margin-right: 0.5rem;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      .comparison-container {
-        margin-top: 3rem;
-        opacity: 0;
-        transform: translateY(20px);
-        transition: all 0.5s ease;
-      }
-
-      .comparison-container.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      }
-
-      th, td {
-        text-align: left;
-        padding: 1rem 0.8rem;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.9rem;
-        vertical-align: top;
-      }
-
-      th {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.5px;
-      }
-
-      tr:hover td {
-        background-color: #f8fafc;
-      }
-
-      .metric-label {
-        font-weight: 600;
-        color: #374151;
-        background: #f8fafc;
-      }
-
-      .metric-value {
-        font-weight: 500;
-        color: #667eea;
-        word-break: break-word;
-        max-width: 200px;
-        display: inline-block;
-      }
-
-      .error {
-        color: #ef4444;
-        font-weight: 500;
-      }
-
-      .project-selector {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-
-      @media (max-width: 768px) {
-        body {
-          padding: 1rem;
-        }
-
-        .container {
-          padding: 2rem;
-        }
-
-        h1 {
-          font-size: 2rem;
-        }
-
-        .project-selector {
-          grid-template-columns: 1fr;
-        }
-      }
+      /* Same CSS as before */
+      body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
+      .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+      h1 { text-align: center; color: #4c1d95; margin-bottom: 2rem; font-weight:800; }
+      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 12px; background: #f1f5f9; transition: 0.2s; }
+      .nav a:hover { background: #e2e8f0; transform: translateY(-2px); }
+      .active-link { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: white !important; }
+      .step { display: none; }
+      .step.active { display: block; animation: fadeIn 0.4s; }
+      @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+      
+      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+      button { padding: 1rem 2rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
+      button:hover { transform: translateY(-2px); opacity: 0.9; }
+      .btn-go { background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; margin-top: 1rem; }
+      .btn-back { background: #64748b; margin-top: 1rem; }
+      
+      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 16px; overflow: hidden; }
+      th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; vertical-align:top; }
+      th { background: #667eea; color: white; }
+      td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Project Comparison</h1>
-      
-      <div class="nav-buttons">
-        <a href="/credentials" class="nav-btn inactive">🔑 Setup Credentials</a>
-        <a href="/" class="nav-btn inactive">📊 Basic Stats</a>
-        <a href="/insights" class="nav-btn inactive">🔍 Detailed Insights</a>
-        <div class="nav-btn active">🔄 Compare Projects</div>
+      <h1>Jira Project Comparison</h1>
+      <div class="nav">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/jira-stats">📊 Stats</a>
+        <a href="/compare" class="active-link">🔄 Compare</a>
+        <a href="/insights">🔍 Insights</a>
       </div>
 
-      <div class="site-form">
-        <div id="site-inputs"></div>
-        <div class="button-group">
-          <button type="button" class="btn-add" onclick="addSiteInput()">
-            ➕ Add Site
-          </button>
-          <button type="button" class="btn-submit" id="load-btn" onclick="loadProjects()">
-            📂 Load Projects
-          </button>
+      <div id="step1" class="step active">
+        <div id="siteInputs"></div>
+        <button onclick="addInput()" style="background:#10b981; margin-top:1rem;">➕ Add Site</button>
+        <button class="btn-go" onclick="loadProjects()">📂 Load Projects</button>
+      </div>
+
+      <div id="step2" class="step">
+        <h2>Select Projects</h2>
+        <div id="selectors" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem;"></div>
+        <div style="display:flex; gap:1rem">
+            <button class="btn-back" onclick="changeStep(1)" style="flex:1">⬅ Back</button>
+            <button class="btn-go" onclick="compare()" style="flex:2">🔍 Compare Selected</button>
         </div>
       </div>
 
-      <div id="project-selection" style="display: none;">
-        <h2 style="color: #374151; margin-bottom: 1.5rem;">Select Projects to Compare</h2>
-        <div class="project-selector" id="project-selectors"></div>
-        <div class="button-group">
-          <button type="button" class="btn-submit" onclick="compareProjects()">
-            🔍 Compare Selected Projects
-          </button>
-        </div>
-      </div>
-
-      <div class="comparison-container" id="comparison-container">
-        <table id="comparison-table"></table>
+      <div id="step3" class="step">
+        <button onclick="changeStep(2)" class="btn-back" style="float:left">⬅ Edit Selection</button>
+        <button onclick="window.print()" style="background:#ef4444; float:right">📄 PDF</button>
+        <div style="clear:both"></div>
+        <div id="results"></div>
       </div>
     </div>
 
     <script>
-      let siteCounter = 0;
-      let sitesData = [];
-      let projectsData = {};
+      let loadedData = [];
+      
+      // Auto-load inputs from previous session
+      const saved = JSON.parse(sessionStorage.getItem('jiraCompareSites') || '[]');
+      if(saved.length > 0) saved.forEach(url => addInput(url));
+      else addInput();
 
-      function addSiteInput() {
-        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
-        if (!savedCreds) {
-          alert('Please setup your credentials first!');
-          window.location.href = '/credentials';
-          return;
-        }
-
-        const container = document.getElementById('site-inputs');
+      function addInput(val = '') {
         const div = document.createElement('div');
-        div.className = 'site-block';
-        div.style.animation = 'slideUp 0.4s ease-out';
+        div.className = 'card';
+        div.innerHTML = `<label>Site URL</label><input class="domain-in" value="${val}" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:2px solid #e2e8f0; border-radius:8px;">`;
+        document.getElementById('siteInputs').appendChild(div);
+      }
 
-        div.innerHTML = `
-          <div class="input-group">
-            <label>🌐 Site URL (e.g. mysite.atlassian.net)</label>
-            <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
-          </div>
-
-          <div class="checkbox-container" style="background: #e0f2fe; border: 1px solid #0891b2; margin-bottom: 1rem;">
-            <span style="color: #0891b2; font-weight: 600;">✅ Using saved credentials</span>
-          </div>
-        `;
-
-        container.appendChild(div);
-        siteCounter++;
+      function changeStep(stepNum) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + stepNum).classList.add('active');
       }
 
       async function loadProjects() {
-        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
-        if (!savedCreds) {
-          alert('Please setup your credentials first!');
-          window.location.href = '/credentials';
-          return;
-        }
+        const inputs = document.querySelectorAll('.domain-in');
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        if(!creds) return alert('Please set credentials first');
 
-        if (siteCounter === 0) {
-          alert('Please add at least one site!');
-          return;
-        }
+        const sites = [];
+        const siteUrls = [];
+        inputs.forEach(inp => {
+            if(inp.value) {
+                sites.push({ domain: inp.value, email: creds.email, token: creds.token });
+                siteUrls.push(inp.value);
+            }
+        });
+        
+        sessionStorage.setItem('jiraCompareSites', JSON.stringify(siteUrls)); // Save state
 
-        const loadBtn = document.getElementById('load-btn');
-        const originalText = loadBtn.innerHTML;
-
-        loadBtn.disabled = true;
-        loadBtn.innerHTML = '<span class="loading"></span>Loading Projects...';
-
-        const creds = JSON.parse(savedCreds);
-        sitesData = [];
-        for (let i = 0; i < siteCounter; i++) {
-          const domainInput = document.querySelector(`[name="domain-${i}"]`);
-          if (domainInput && domainInput.value) {
-            const domain = domainInput.value
-              .replace(/^https?:\/\//, '')
-              .replace(/\/$/, '')
-              .replace('.atlassian.net', '');
-            sitesData.push({ domain, email: creds.email, token: creds.token });
-          }
-        }
+        if(sites.length === 0) return alert('Enter a site');
+        
+        const btn = document.querySelector('#step1 .btn-go');
+        btn.innerText = 'Loading...'; btn.disabled = true;
 
         try {
-          const res = await fetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sites: sitesData })
-          });
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ sites })
+            });
+            const data = await res.json();
+            loadedData = data; // Store raw data for back navigation
+            
+            const container = document.getElementById('selectors');
+            container.innerHTML = '';
+            
+            data.results.forEach((s, idx) => {
+                let html = `<div class="card"><h3>${s.domain}</h3><div style="max-height:300px; overflow-y:auto">`;
+                if(s.error) html += `<p style="color:red">${s.error}</p>`;
+                else {
+                    s.projects.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
+                        html += `<div><input type="checkbox" id="${idx}-${p.key}" value="${p.key}"><label for="${idx}-${p.key}"> ${p.name}</label></div>`;
+                    });
+                }
+                container.innerHTML += html + '</div></div>';
+            });
 
-          const data = await res.json();
-          projectsData = data;
-          renderProjectSelectors(data);
-          document.getElementById('project-selection').style.display = 'block';
-        } catch (error) {
-          alert('Error loading projects: ' + error.message);
-        } finally {
-          loadBtn.disabled = false;
-          loadBtn.innerHTML = originalText;
-        }
+            changeStep(2);
+        } catch(e) { alert(e); } finally { btn.innerText = '📂 Load Projects'; btn.disabled = false; }
       }
 
-      function renderProjectSelectors(data) {
-        const container = document.getElementById('project-selectors');
-        container.innerHTML = '';
-
-        data.results.forEach((siteData, index) => {
-          const div = document.createElement('div');
-          div.className = 'site-block';
-          div.style.animation = 'slideUp 0.4s ease-out';
-          
-          let checkboxes = '';
-          if (siteData.error) {
-            checkboxes = '<div style="color: #ef4444;">❌ Error loading projects</div>';
-          } else if (siteData.projects && siteData.projects.length > 0) {
-            checkboxes = siteData.projects
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map(p => `
-                <div style="margin: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                  <input type="checkbox" id="project-${index}-${p.key}" value="${p.key}" style="accent-color: #667eea;">
-                  <label for="project-${index}-${p.key}" style="margin: 0; cursor: pointer; flex: 1;">${p.name} (${p.key}) - ${p.issueCount.toLocaleString()} issues</label>
-                </div>
-              `).join('');
-          } else {
-            checkboxes = '<div style="color: #64748b;">No projects found</div>';
-          }
-
-          div.innerHTML = `
-            <div class="input-group">
-              <label>📋 ${siteData.domain} - Select Projects</label>
-              <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; background: #fafafa;">
-                ${checkboxes}
-              </div>
-              <div style="margin-top: 0.5rem;">
-                <button type="button" onclick="selectAllProjects(${index})" style="padding: 0.3rem 0.8rem; margin-right: 0.5rem; font-size: 0.8rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Select All</button>
-                <button type="button" onclick="clearAllProjects(${index})" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">Clear All</button>
-              </div>
-            </div>
-            ${siteData.projects ? `<div style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">Found ${siteData.projects.length} projects</div>` : ''}
-          `;
-          
-          container.appendChild(div);
-        });
-      }
-
-      function selectAllProjects(siteIndex) {
-        const checkboxes = document.querySelectorAll(`input[id^="project-${siteIndex}-"]`);
-        checkboxes.forEach(cb => cb.checked = true);
-      }
-
-      function clearAllProjects(siteIndex) {
-        const checkboxes = document.querySelectorAll(`input[id^="project-${siteIndex}-"]`);
-        checkboxes.forEach(cb => cb.checked = false);
-      }
-
-      async function compareProjects() {
-        const selectedProjects = [];
+      async function compare() {
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const selected = [];
         
-        projectsData.results.forEach((siteData, index) => {
-          const checkboxes = document.querySelectorAll(`input[id^="project-${index}-"]:checked`);
-          
-          checkboxes.forEach(checkbox => {
-            const projectKey = checkbox.value;
-            if (siteData.projects) {
-              const project = siteData.projects.find(p => p.key === projectKey);
-              if (project) {
-                selectedProjects.push({
-                  domain: siteData.domain,
-                  site: sitesData[index],
-                  project: project
-                });
-              }
-            }
-          });
+        loadedData.results.forEach((site, idx) => {
+            if(!site.projects) return;
+            site.projects.forEach(p => {
+                const cb = document.getElementById(`${idx}-${p.key}`);
+                if(cb && cb.checked) {
+                    selected.push({ domain: site.domain, site: { email: creds.email, token: creds.token }, project: p });
+                }
+            });
         });
 
-        if (selectedProjects.length === 0) {
-          alert('Please select at least one project to compare');
-          return;
-        }
+        if(selected.length === 0) return alert('Select a project');
 
-        const compareBtn = event.target;
-        const originalText = compareBtn.innerHTML;
-        compareBtn.disabled = true;
-        compareBtn.innerHTML = '<span class="loading"></span>Comparing...';
+        const btn = document.querySelector('#step2 .btn-go');
+        btn.innerText = 'Fetching Deep Data...'; btn.disabled = true;
 
         try {
-          const res = await fetch('/api/compare-projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projects: selectedProjects })
-          });
-
-          const data = await res.json();
-          renderComparisonTable(data.results);
-          document.getElementById('comparison-container').classList.add('show');
-        } catch (error) {
-          alert('Error comparing projects: ' + error.message);
-        } finally {
-          compareBtn.disabled = false;
-          compareBtn.innerHTML = originalText;
-        }
-      }
-
-      function renderComparisonTable(results) {
-        const metrics = [
-          ['name', '📝 Project Name'],
-          ['key', '🔑 Project Key'],
-          ['lead', '👤 Project Lead'],
-          ['issueCount', '🎫 Number of Issues'],
-          ['componentCount', '🧩 Number of Components'],
-          ['issueTypeScheme', '📋 Issue Type Scheme'],
-          ['permissionScheme', '🔐 Permission Scheme'],
-          ['notificationScheme', '📧 Notification Scheme'],
-          ['statuses', '📊 Project Statuses']
-        ];
-
-        // Group results by domain
-        const groupedResults = {};
-        results.forEach(r => {
-          if (!groupedResults[r.domain]) {
-            groupedResults[r.domain] = [];
-          }
-          groupedResults[r.domain].push(r);
-        });
-
-        const sites = Object.keys(groupedResults);
-        
-        // Build header row with sites
-        let html = '<tr><th></th>';
-        sites.forEach(site => {
-          html += `<th style="text-align: center; background: linear-gradient(135deg, #667eea, #764ba2);">${site}</th>`;
-        });
-        html += '</tr>';
-
-        // Find max projects per site to determine how many project rows we need
-        const maxProjects = Math.max(...Object.values(groupedResults).map(projects => projects.length));
-        
-        // Create rows for each project number
-        for (let projectIndex = 0; projectIndex < maxProjects; projectIndex++) {
-          // Project header row
-          html += '<tr>';
-          html += `<td class="metric-label" style="background: #f1f5f9;">Project ${projectIndex + 1}</td>`;
-          sites.forEach(site => {
-            const project = groupedResults[site][projectIndex];
-            if (project) {
-              html += `<td style="font-weight: 600; background: #f8fafc; text-align: center;">${project.name} (${project.key})</td>`;
-            } else {
-              html += '<td style="background: #f8fafc;">-</td>';
-            }
-          });
-          html += '</tr>';
-          
-          // Metric rows for this project
-          metrics.forEach(([key, label]) => {
-            html += '<tr>';
-            html += `<td class="metric-label" style="padding-left: 2rem;">${label}</td>`;
+            const res = await fetch('/api/compare-projects', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ projects: selected })
+            });
+            const data = await res.json();
             
-            sites.forEach(site => {
-              const project = groupedResults[site][projectIndex];
-              if (project) {
-                if (project.error) {
-                  html += `<td class="error">❌ Error</td>`;
-                } else {
-                  let value = project[key] ?? 'N/A';
-                  if (key === 'issueCount' && typeof value === 'number') {
-                    value = value.toLocaleString();
-                  }
-                  
-                  // Handle long status lists
-                  if (key === 'statuses') {
-                    const statusArray = value.split(', ');
-                    if (statusArray.length > 10) {
-                      const remaining = statusArray.length - 10;
-                      value = `${statusArray.slice(0, 10).join(', ')} <span class="show-more" onclick="toggleStatuses(this, '${project.allStatuses}')" style="color: #667eea; cursor: pointer; text-decoration: underline;">+${remaining} more</span>`;
-                    }
-                  }
-                  
-                  html += `<td><span class="metric-value" title="${value}">${value}</span></td>`;
-                }
-              } else {
-                html += '<td>-</td>';
-              }
+            let html = '<table><thead><tr><th>Metric</th>';
+            data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.key}</small></th>`);
+            html += '</tr></thead><tbody>';
+            
+            const metrics = [
+                ['name','📝 Name'], ['lead','👤 Lead'], ['issueCount','🎫 Issues'],
+                ['workflowScheme','🔄 Workflow Scheme'], ['issueTypeScheme','📋 Issue Type Scheme'],
+                ['priorityScheme','🎯 Priority Scheme'], ['fieldConfiguration','⚙️ Field Config'],
+                ['screenScheme','🖼️ Screen Scheme'], ['permissionScheme','🔐 Permissions'],
+                ['notificationScheme','📧 Notifications'], ['statuses','📊 Statuses']
+            ];
+
+            metrics.forEach(([k, l]) => {
+                html += `<tr><td>${l}</td>` + data.results.map(r => `<td>${r[k]||'-'}</td>`).join('') + '</tr>';
             });
             
-            html += '</tr>';
-          });
-          
-          // Add spacing row between projects
-          if (projectIndex < maxProjects - 1) {
-            html += '<tr style="height: 10px;"><td colspan="' + (sites.length + 1) + '" style="background: #f9fafb; border: none;"></td></tr>';
-          }
-        }
-
-        document.getElementById('comparison-table').innerHTML = html;
+            document.getElementById('results').innerHTML = html + '</tbody></table>';
+            changeStep(3);
+        } catch(e) { alert(e); } finally { btn.innerText = '🔍 Compare Selected'; btn.disabled = false; }
       }
-
-      function toggleStatuses(element, allStatuses) {
-        const cell = element.parentElement;
-        if (element.textContent.includes('more')) {
-          cell.innerHTML = `<span class="metric-value">${allStatuses} <span class="show-less" onclick="location.reload()" style="color: #667eea; cursor: pointer; text-decoration: underline;">show less</span></span>`;
-        }
-      }
-
-      // Load credentials from sessionStorage if available
-      function loadStoredCredentials() {
-        const stored = sessionStorage.getItem('atlassianCredentials');
-        if (stored) {
-          try {
-            const sites = JSON.parse(stored);
-            sites.forEach((site, index) => {
-              if (index > 0) addSiteInput();
-              
-              setTimeout(() => {
-                const domainInput = document.querySelector(`[name="domain-${index}"]`);
-                if (domainInput) {
-                  domainInput.value = site.domain;
-                }
-              }, 100);
-            });
-          } catch (e) {
-            console.warn('Failed to load stored credentials:', e);
-          }
-        }
-      }
-
-      // Add initial site input
-      addSiteInput();
-      
-      // Load stored credentials
-      setTimeout(loadStoredCredentials, 200);
     </script>
   </body>
 </html>

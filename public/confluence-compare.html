@@ -2,46 +2,56 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Compare Spaces</title>
+    <title>Compare Confluence</title>
     <style>
-      /* Same styles as stats page */
-      body { margin: 0; font-family: system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
+      body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
       .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; }
-      h1 { text-align: center; color: #4c1d95; }
-      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
-      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; }
-      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #ddd; }
-      button { padding: 1rem; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top:1rem; }
-      .btn-go { background: #667eea; width: 100%; }
+      h1 { text-align: center; color: #4c1d95; margin-bottom: 2rem; }
+      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 12px; background: #f1f5f9; transition: 0.2s; }
+      .nav a:hover { background: #e2e8f0; transform: translateY(-2px); }
+      .active-link { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: white !important; }
       .step { display: none; }
-      .step.active { display: block; }
-      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; }
-      th, td { padding: 1rem; border: 1px solid #eee; text-align: center; }
+      .step.active { display: block; animation: fadeIn 0.4s; }
+      @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+      
+      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+      button { padding: 1rem 2rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
+      .btn-go { background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; margin-top: 1rem; }
+      .btn-back { background: #64748b; margin-top: 1rem; }
+      
+      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 16px; overflow: hidden; }
+      th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
       th { background: #667eea; color: white; }
+      td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Compare Spaces</h1>
+      <h1>Compare Confluence Spaces</h1>
       <div class="nav">
         <a href="/">🏠 Dashboard</a>
         <a href="/confluence-stats">📊 Stats</a>
-        <a href="/confluence-compare" style="color:#667eea; background:#eff6ff">⚖️ Compare Spaces</a>
+        <a href="/confluence-compare" class="active-link">⚖️ Compare</a>
       </div>
 
       <div id="step1" class="step active">
         <div id="siteInputs"></div>
-        <button onclick="addInput()" style="background:#10b981">➕ Add Site</button>
+        <button onclick="addInput()" style="background:#10b981; margin-top:1rem;">➕ Add Site</button>
         <button class="btn-go" onclick="loadSpaces()">📂 Load Spaces</button>
       </div>
 
       <div id="step2" class="step">
         <h2>Select Spaces</h2>
-        <div id="selectors" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem"></div>
-        <button class="btn-go" onclick="compare()">🔍 Compare Selected</button>
+        <div id="selectors" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem;"></div>
+        <div style="display:flex; gap:1rem">
+            <button class="btn-back" onclick="changeStep(1)" style="flex:1">⬅ Back</button>
+            <button class="btn-go" onclick="compare()" style="flex:2">🔍 Compare Selected</button>
+        </div>
       </div>
 
       <div id="step3" class="step">
+        <button onclick="changeStep(2)" class="btn-back" style="float:left">⬅ Edit Selection</button>
         <button onclick="window.print()" style="background:#ef4444; float:right">📄 PDF</button>
         <div style="clear:both"></div>
         <div id="results"></div>
@@ -49,27 +59,42 @@
     </div>
 
     <script>
-      let loadedSpaces = [];
-      addInput();
+      let loadedData = [];
+      const saved = JSON.parse(sessionStorage.getItem('confCompareSites') || '[]');
+      if(saved.length > 0) saved.forEach(url => addInput(url));
+      else addInput();
 
-      function addInput() {
-        if (!localStorage.getItem('atlassianGlobalCreds')) return window.location.href = '/credentials';
+      function addInput(val = '') {
         const div = document.createElement('div');
         div.className = 'card';
-        div.innerHTML = `<label>Site URL</label><input class="domain-in" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:1px solid #ccc; border-radius:4px;">`;
+        div.innerHTML = `<label>Site URL</label><input class="domain-in" value="${val}" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:2px solid #e2e8f0; border-radius:8px;">`;
         document.getElementById('siteInputs').appendChild(div);
+      }
+
+      function changeStep(n) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step'+n).classList.add('active');
       }
 
       async function loadSpaces() {
         const inputs = document.querySelectorAll('.domain-in');
         const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
-        const sites = [];
-        
-        inputs.forEach(inp => {
-            if(inp.value) sites.push({ domain: inp.value, email: creds.email, token: creds.token });
-        });
+        if(!creds) return alert('No credentials');
 
-        document.querySelector('#step1 .btn-go').innerText = 'Loading...';
+        const sites = [];
+        const siteUrls = [];
+        inputs.forEach(inp => {
+            if(inp.value) {
+                sites.push({ domain: inp.value, email: creds.email, token: creds.token });
+                siteUrls.push(inp.value);
+            }
+        });
+        sessionStorage.setItem('confCompareSites', JSON.stringify(siteUrls));
+
+        if(sites.length === 0) return alert('Enter a site');
+
+        const btn = document.querySelector('#step1 .btn-go');
+        btn.innerText = 'Loading...'; btn.disabled = true;
 
         try {
             const res = await fetch('/api/confluence/spaces', {
@@ -78,53 +103,43 @@
                 body: JSON.stringify({ sites })
             });
             const data = await res.json();
-            loadedSpaces = data.results;
-            
+            loadedData = data;
+
             const container = document.getElementById('selectors');
             container.innerHTML = '';
             
-            data.results.forEach((r, idx) => {
-                const div = document.createElement('div');
-                div.className = 'card';
-                if(r.error) {
-                    div.innerHTML = `<h3>${r.domain}</h3><p style="color:red">${r.error}</p>`;
-                } else {
-                    let html = `<h3>${r.domain}</h3><div style="max-height:300px; overflow-y:auto">`;
-                    r.spaces.forEach(s => {
-                        html += `<div><input type="checkbox" id="${idx}-${s.key}"><label for="${idx}-${s.key}"> ${s.name}</label></div>`;
+            data.results.forEach((s, idx) => {
+                let html = `<div class="card"><h3>${s.domain}</h3><div style="max-height:300px; overflow-y:auto">`;
+                if(s.error) html += `<p style="color:red">${s.error}</p>`;
+                else {
+                    s.spaces.forEach(sp => {
+                        html += `<div><input type="checkbox" id="${idx}-${sp.key}"><label for="${idx}-${sp.key}"> ${sp.name}</label></div>`;
                     });
-                    div.innerHTML = html + '</div>';
                 }
-                container.appendChild(div);
+                container.innerHTML += html + '</div></div>';
             });
-
-            document.getElementById('step1').classList.remove('active');
-            document.getElementById('step2').classList.add('active');
-        } catch(e) { alert(e); }
+            changeStep(2);
+        } catch(e) { alert(e); } finally { btn.innerText = '📂 Load Spaces'; btn.disabled = false; }
       }
 
       async function compare() {
         const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const selected = [];
         
-        loadedSpaces.forEach((site, idx) => {
+        loadedData.results.forEach((site, idx) => {
             if(!site.spaces) return;
             site.spaces.forEach(s => {
                 const cb = document.getElementById(`${idx}-${s.key}`);
                 if(cb && cb.checked) {
-                    selected.push({
-                        domain: site.domain,
-                        site: { email: creds.email, token: creds.token },
-                        spaceKey: s.key,
-                        spaceName: s.name
-                    });
+                    selected.push({ domain: site.domain, site: { email: creds.email, token: creds.token }, spaceKey: s.key, spaceName: s.name });
                 }
             });
         });
 
-        if(selected.length === 0) return alert('Select at least one space');
+        if(selected.length === 0) return alert('Select a space');
 
-        document.querySelector('#step2 .btn-go').innerText = 'Comparing...';
+        const btn = document.querySelector('#step2 .btn-go');
+        btn.innerText = 'Analyzing...'; btn.disabled = true;
 
         try {
             const res = await fetch('/api/confluence/compare-spaces', {
@@ -132,26 +147,21 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ spaces: selected })
             });
+            const data = await res.json();
             
-            // Explicitly handle text/html errors from server
-            const text = await res.text();
-            let data;
-            try { data = JSON.parse(text); } catch(e) { throw new Error('Server returned error: ' + text.substring(0, 100)); }
-
             let html = '<table><thead><tr><th>Metric</th>';
-            data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.spaceKey}</small></th>`);
+            data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.spaceName}</small></th>`);
             html += '</tr></thead><tbody>';
 
-            const metrics = [['pages','Pages'], ['blogposts','Blogs'], ['attachments','Attachments']];
-            metrics.forEach(([k, label]) => {
-                html += `<tr><td style="text-align:left; background:#f9f9f9; font-weight:600">${label}</td>` + 
-                data.results.map(r => `<td>${r.error?'Error':(r[k]||0)}</td>`).join('') + '</tr>';
+            const metrics = [['owner','👤 Owner'], ['lastModified','📅 Last Mod'], ['pages','📄 Pages'], ['blogposts','📰 Blogs'], ['calendars','📅 Calendars'], ['attachments','📎 Files']];
+
+            metrics.forEach(([k, l]) => {
+                html += `<tr><td>${l}</td>` + data.results.map(r => `<td>${r[k]||0}</td>`).join('') + '</tr>';
             });
 
             document.getElementById('results').innerHTML = html + '</tbody></table>';
-            document.getElementById('step2').classList.remove('active');
-            document.getElementById('step3').classList.add('active');
-        } catch(e) { alert(e.message); }
+            changeStep(3);
+        } catch(e) { alert(e); } finally { btn.innerText = '🔍 Compare Selected'; btn.disabled = false; }
       }
     </script>
   </body>
