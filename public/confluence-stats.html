@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Confluence Stats</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
+      .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+      h1 { text-align: center; color: #4c1d95; }
+      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; }
+      .nav a:hover { background: #e2e8f0; }
+      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #ddd; }
+      input { width: 100%; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 8px; margin-top: 5px; }
+      button { padding: 1rem 2rem; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 1rem; }
+      .btn-add { background: #10b981; }
+      .btn-go { background: #667eea; width: 100%; margin-top: 1rem; }
+      .btn-pdf { background: #ef4444; float: right; margin-bottom: 1rem; }
+      
+      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 12px; overflow: hidden; }
+      th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
+      th { background: #667eea; color: white; }
+      td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Confluence Overview</h1>
+      <div class="nav">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/confluence-stats" style="color:#667eea; background:#eff6ff">📊 Stats</a>
+        <a href="/confluence-compare">⚖️ Compare Spaces</a>
+      </div>
+
+      <div id="inputs"></div>
+      <button class="btn-add" onclick="addSite()">➕ Add Site</button>
+      <button class="btn-go" onclick="analyze()">Analyze</button>
+
+      <div id="results" style="display:none; margin-top:2rem">
+        <button class="btn-pdf" onclick="window.print()">📄 Save as PDF</button>
+        <table id="table"></table>
+      </div>
+    </div>
+
+    <script>
+      let count = 0;
+      addSite();
+
+      function addSite() {
+        if (!localStorage.getItem('atlassianGlobalCreds')) return window.location.href = '/credentials';
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `<label>Site URL</label><input class="site-in" placeholder="company.atlassian.net">`;
+        document.getElementById('inputs').appendChild(div);
+        count++;
+      }
+
+      async function analyze() {
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const inputs = document.querySelectorAll('.site-in');
+        const sites = [];
+        
+        inputs.forEach(inp => {
+            if(inp.value) sites.push({ domain: inp.value, email: creds.email, token: creds.token });
+        });
+
+        const btn = document.querySelector('.btn-go');
+        btn.innerText = 'Loading...';
+        
+        try {
+            const res = await fetch('/api/confluence/stats', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ sites })
+            });
+            const data = await res.json();
+            render(data.results);
+            document.getElementById('results').style.display = 'block';
+        } catch(e) { alert(e); }
+        btn.innerText = 'Analyze';
+      }
+
+      function render(data) {
+        const metrics = [
+            ['total', '📚 Total Spaces'],
+            ['active', '✅ Active Spaces'],
+            ['archived', '📦 Archived Spaces'],
+            ['global', '🌐 Global Spaces'],
+            ['personal', '👤 Personal Spaces']
+        ];
+        
+        let html = '<thead><tr><th>Metric</th>' + data.map(d => `<th>${d.domain}</th>`).join('') + '</tr></thead><tbody>';
+        metrics.forEach(([key, label]) => {
+            html += `<tr><td>${label}</td>` + data.map(d => `<td>${d.error ? '❌' : (d[key] || 0)}</td>`).join('') + '</tr>';
+        });
+        document.getElementById('table').innerHTML = html + '</tbody>';
+      }
+    </script>
+  </body>
+</html>

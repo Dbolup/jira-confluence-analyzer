@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Compare Spaces</title>
+    <style>
+      /* Same styles as stats page */
+      body { margin: 0; font-family: system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
+      .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; }
+      h1 { text-align: center; color: #4c1d95; }
+      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; }
+      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #ddd; }
+      button { padding: 1rem; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; margin-top:1rem; }
+      .btn-go { background: #667eea; width: 100%; }
+      .step { display: none; }
+      .step.active { display: block; }
+      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; }
+      th, td { padding: 1rem; border: 1px solid #eee; text-align: center; }
+      th { background: #667eea; color: white; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Compare Spaces</h1>
+      <div class="nav">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/confluence-stats">📊 Stats</a>
+        <a href="/confluence-compare" style="color:#667eea; background:#eff6ff">⚖️ Compare Spaces</a>
+      </div>
+
+      <div id="step1" class="step active">
+        <div id="siteInputs"></div>
+        <button onclick="addInput()" style="background:#10b981">➕ Add Site</button>
+        <button class="btn-go" onclick="loadSpaces()">📂 Load Spaces</button>
+      </div>
+
+      <div id="step2" class="step">
+        <h2>Select Spaces</h2>
+        <div id="selectors" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem"></div>
+        <button class="btn-go" onclick="compare()">🔍 Compare Selected</button>
+      </div>
+
+      <div id="step3" class="step">
+        <button onclick="window.print()" style="background:#ef4444; float:right">📄 PDF</button>
+        <div style="clear:both"></div>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <script>
+      let loadedSpaces = [];
+      addInput();
+
+      function addInput() {
+        if (!localStorage.getItem('atlassianGlobalCreds')) return window.location.href = '/credentials';
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `<label>Site URL</label><input class="domain-in" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:1px solid #ccc; border-radius:4px;">`;
+        document.getElementById('siteInputs').appendChild(div);
+      }
+
+      async function loadSpaces() {
+        const inputs = document.querySelectorAll('.domain-in');
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const sites = [];
+        
+        inputs.forEach(inp => {
+            if(inp.value) sites.push({ domain: inp.value, email: creds.email, token: creds.token });
+        });
+
+        document.querySelector('#step1 .btn-go').innerText = 'Loading...';
+
+        try {
+            const res = await fetch('/api/confluence/spaces', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ sites })
+            });
+            const data = await res.json();
+            loadedSpaces = data.results;
+            
+            const container = document.getElementById('selectors');
+            container.innerHTML = '';
+            
+            data.results.forEach((r, idx) => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                if(r.error) {
+                    div.innerHTML = `<h3>${r.domain}</h3><p style="color:red">${r.error}</p>`;
+                } else {
+                    let html = `<h3>${r.domain}</h3><div style="max-height:300px; overflow-y:auto">`;
+                    r.spaces.forEach(s => {
+                        html += `<div><input type="checkbox" id="${idx}-${s.key}"><label for="${idx}-${s.key}"> ${s.name}</label></div>`;
+                    });
+                    div.innerHTML = html + '</div>';
+                }
+                container.appendChild(div);
+            });
+
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+        } catch(e) { alert(e); }
+      }
+
+      async function compare() {
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const selected = [];
+        
+        loadedSpaces.forEach((site, idx) => {
+            if(!site.spaces) return;
+            site.spaces.forEach(s => {
+                const cb = document.getElementById(`${idx}-${s.key}`);
+                if(cb && cb.checked) {
+                    selected.push({
+                        domain: site.domain,
+                        site: { email: creds.email, token: creds.token },
+                        spaceKey: s.key,
+                        spaceName: s.name
+                    });
+                }
+            });
+        });
+
+        if(selected.length === 0) return alert('Select at least one space');
+
+        document.querySelector('#step2 .btn-go').innerText = 'Comparing...';
+
+        try {
+            const res = await fetch('/api/confluence/compare-spaces', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ spaces: selected })
+            });
+            
+            // Explicitly handle text/html errors from server
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch(e) { throw new Error('Server returned error: ' + text.substring(0, 100)); }
+
+            let html = '<table><thead><tr><th>Metric</th>';
+            data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.spaceKey}</small></th>`);
+            html += '</tr></thead><tbody>';
+
+            const metrics = [['pages','Pages'], ['blogposts','Blogs'], ['attachments','Attachments']];
+            metrics.forEach(([k, label]) => {
+                html += `<tr><td style="text-align:left; background:#f9f9f9; font-weight:600">${label}</td>` + 
+                data.results.map(r => `<td>${r.error?'Error':(r[k]||0)}</td>`).join('') + '</tr>';
+            });
+
+            document.getElementById('results').innerHTML = html + '</tbody></table>';
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.add('active');
+        } catch(e) { alert(e.message); }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jira Site Stats</title>
+    <style>
+      /* Identical CSS to keep the style consistent */
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #1c1e21;
+        padding: 2rem;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 3rem;
+        animation: slideUp 0.6s ease-out;
+      }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+      h1 {
+        font-weight: 700;
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+      }
+      h1::after {
+        content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+        width: 80px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;
+      }
+      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+      .nav-btn {
+        padding: 0.8rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px;
+        cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block;
+      }
+      .nav-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+      .nav-btn.inactive { background: #f1f5f9; color: #64748b; }
+      .nav-btn.inactive:hover { background: #e2e8f0; transform: translateY(-2px); }
+
+      .site-block {
+        background: white; border: 2px solid #f0f0f0; border-radius: 16px; padding: 2rem;
+        margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); position: relative; overflow: hidden;
+      }
+      .site-block:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15); }
+      .input-group { margin-bottom: 1rem; }
+      label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151; }
+      input[type="text"] {
+        width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 12px; background: #fafafa;
+      }
+      input:focus { outline: none; border-color: #667eea; background: white; }
+      
+      .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
+      button { padding: 1rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; color: white; flex: 1; transition: transform 0.2s; }
+      .btn-add { background: linear-gradient(135deg, #10b981, #059669); }
+      .btn-submit { background: linear-gradient(135deg, #667eea, #764ba2); flex: 2; }
+      button:hover { transform: translateY(-2px); opacity: 0.9; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .stats-container { margin-top: 3rem; display: none; }
+      .stats-container.show { display: block; animation: slideUp 0.5s ease; }
+      
+      table { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+      th, td { padding: 1.2rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
+      th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+      td:first-child { text-align: left; font-weight: 600; background: #f8fafc; color: #374151; }
+      .metric-value { font-weight: 600; color: #667eea; }
+      
+      .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-right: 10px; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Jira Site Stats</h1>
+      
+      <div class="nav-buttons">
+        <a href="/" class="nav-btn inactive">🏠 Dashboard</a>
+        <div class="nav-btn active">📊 Jira Stats</div>
+        <a href="/compare" class="nav-btn inactive">🔄 Jira Compare</a>
+        <a href="/insights" class="nav-btn inactive">🔍 Detailed Insights</a>
+      </div>
+
+      <form id="site-form">
+        <div id="site-inputs"></div>
+        <div class="button-group">
+          <button type="button" class="btn-add" onclick="addSiteInput()">➕ Add Site</button>
+          <button type="submit" class="btn-submit" id="submit-btn">📊 Get Stats</button>
+        </div>
+      </form>
+
+      <div class="stats-container" id="stats-container">
+        <table id="stats-table"></table>
+      </div>
+    </div>
+
+    <script>
+      let siteCounter = 0;
+
+      function addSiteInput() {
+        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
+        if (!savedCreds) {
+            if(confirm('No credentials found. Go to setup?')) window.location.href = '/credentials';
+            return;
+        }
+
+        const container = document.getElementById('site-inputs');
+        const div = document.createElement('div');
+        div.className = 'site-block';
+        div.innerHTML = `
+          <div class="input-group">
+            <label>🌐 Site URL</label>
+            <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
+          </div>
+          <div style="background: #e0f2fe; padding: 0.8rem; border-radius: 8px; color: #0891b2; font-weight: 600; font-size: 0.9rem;">
+            ✅ Using saved credentials
+          </div>
+        `;
+        container.appendChild(div);
+        siteCounter++;
+      }
+
+      document.getElementById('site-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span>Analyzing...';
+
+        const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const sites = [];
+        
+        for (let i = 0; i < siteCounter; i++) {
+          const domain = document.querySelector(`[name="domain-${i}"]`).value
+            .replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
+          sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
+        }
+
+        try {
+          const res = await fetch('/api/stats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sites })
+          });
+          
+          const data = await res.json();
+          renderTable(data.results);
+          document.getElementById('stats-container').classList.add('show');
+        } catch (err) {
+          alert('Error: ' + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+
+      function renderTable(results) {
+        const metrics = [
+          ['projectCount', '📋 Projects'],
+          ['issueTypeCount', '🎫 Issue Types'],
+          ['workflowCount', '⚙️ Workflows'],
+          ['screenCount', '🖥️ Screens'],
+          ['fieldCount', '🏷️ Custom Fields'],
+          ['statusCount', '📊 Statuses'],
+          ['priorityCount', '⭐ Priorities'],
+          ['dashboardCount', '📊 Dashboards'],
+          ['boardCount', '📌 Boards'],
+          ['resolutionCount', '🔄 Resolutions'],
+          ['notificationSchemeCount', '📧 Notification Schemes'],
+          ['permissionSchemeCount', '🔐 Permission Schemes'],
+          ['issueSecuritySchemeCount', '🔒 Security Schemes']
+        ];
+
+        let html = '<tr><th>Metric</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
+        
+        metrics.forEach(([key, label]) => {
+          html += `<tr><td>${label}</td>` + 
+            results.map(r => {
+               if (r.error) return `<td style="color:#ef4444">Error</td>`;
+               return `<td><span class="metric-value">${r[key] || 0}</span></td>`;
+            }).join('') + '</tr>';
+        });
+
+        document.getElementById('stats-table').innerHTML = html;
+      }
+
+      // Initialize
+      addSiteInput();
+    </script>
+  </body>
+</html>
