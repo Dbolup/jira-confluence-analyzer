@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fetch from 'node-fetch'; // Ensure node-fetch is imported
+import fetch from 'node-fetch'; 
 import * as jiraUtils from './utils/atlassian.js';
 import * as confluenceUtils from './utils/confluence.js';
 
@@ -16,8 +16,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- HTML Navigation Routes ---
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html'))); // Main Landing Dashboard
-app.get('/jira-stats', (req, res) => res.sendFile(path.join(__dirname, 'public/jira-stats.html'))); // RESTORED Jira Stats
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/jira-stats', (req, res) => res.sendFile(path.join(__dirname, 'public/jira-stats.html')));
 app.get('/compare', (req, res) => res.sendFile(path.join(__dirname, 'public/compare.html')));
 app.get('/insights', (req, res) => res.sendFile(path.join(__dirname, 'public/insights.html')));
 app.get('/credentials', (req, res) => res.sendFile(path.join(__dirname, 'public/credentials.html')));
@@ -40,7 +40,7 @@ const getBaseUrl = (domain, type = 'jira') => {
 // 🔷 JIRA API ROUTES
 // ==========================================
 
-// 1. Jira Basic Stats
+// 1. Jira Basic Stats (Updated with all 21 resources)
 app.post('/api/stats', async (req, res, next) => {
   try {
     const { sites } = req.body;
@@ -55,7 +55,6 @@ app.post('/api/stats', async (req, res, next) => {
 
         const safeCall = (fn, ...args) => fn(...args).catch(e => ({ error: e.message }));
 
-        // Parallel Fetch
         const [
             projects, fields, dashboards, boards, workflows, workflowSchemes,
             issueTypes, issueTypeSchemes, priorities, prioritySchemes,
@@ -87,34 +86,31 @@ app.post('/api/stats', async (req, res, next) => {
 
         results.push({
           domain: site.domain,
-          projectCount: projects.total ?? projects,
-          projectsActive: projects.active ?? 0,
-          projectsArchived: projects.archived ?? 0,
-          fieldCount: fields.total ?? fields,
-          fieldsUnique: fields.unique ?? 0,
-          fieldsDuplicated: fields.duplicates ?? 0,
-          dashboardCount: dashboards,
+          
+          // Resources Count
           boardCount: boards,
-          workflowCount: workflows,
-          workflowSchemeCount: workflowSchemes.total ?? workflowSchemes,
-          workflowSchemesActive: workflowSchemes.active ?? 0,
-          workflowSchemesInactive: workflowSchemes.inactive ?? 0,
-          issueTypeCount: issueTypes,
-          issueTypeSchemeCount: issueTypeSchemes.total ?? issueTypeSchemes,
-          issueTypeSchemesActive: issueTypeSchemes.active ?? 0,
-          issueTypeSchemesInactive: issueTypeSchemes.inactive ?? 0,
-          priorityCount: priorities,
-          prioritySchemeCount: prioritySchemes,
-          statusCount: statuses,
-          notificationSchemeCount: notificationSchemes,
-          issueSecuritySchemeCount: issueSecuritySchemes,
-          screenCount: screens,
-          screenSchemeCount: screenSchemes,
-          issueTypeScreenSchemeCount: issueTypeScreenSchemes,
+          dashboardCount: dashboards,
+          fieldCount: fields.total ?? fields,
           fieldConfigurationCount: fieldConfigs,
           fieldConfigurationSchemeCount: fieldConfigSchemes,
+          filterCount: filters,
+          issueSecuritySchemeCount: issueSecuritySchemes,
+          issueTypeCount: issueTypes,
+          issueTypeSchemeCount: issueTypeSchemes.total ?? issueTypeSchemes,
+          issueTypeScreenSchemeCount: issueTypeScreenSchemes,
+          notificationSchemeCount: notificationSchemes,
+          permissionSchemeCount: projects.total ? "Per Project" : 0, // Permission schemes are often distinct per project or shared, usually fetched via scheme endpoint if needed.
+          // Correcting Permission Scheme Count (using utils if available or defaulting to fetch length)
+          permissionSchemeCount: (await safeCall(jiraUtils.getPermissionSchemes, { headers, baseUrl })) || 0,
+          priorityCount: priorities,
+          prioritySchemeCount: prioritySchemes,
+          projectCount: projects.total ?? projects,
           resolutionCount: resolutions,
-          filterCount: filters
+          screenCount: screens,
+          screenSchemeCount: screenSchemes,
+          statusCount: statuses,
+          workflowCount: workflows,
+          workflowSchemeCount: workflowSchemes.total ?? workflowSchemes
         });
 
       } catch (e) {
@@ -149,48 +145,54 @@ app.post('/api/compare-projects', async (req, res, next) => {
     try {
         const { projects } = req.body;
         
-        // We need to fetch details for EACH project individually
-        // This includes: Components, Schemes, and Statuses
         const detailedResults = await Promise.all(projects.map(async (p) => {
             try {
                 const headers = getAuthHeaders(p.site.email, p.site.token);
                 const baseUrl = getBaseUrl(p.domain);
                 const projectKey = p.project.key;
 
-                // 1. Fetch Project Details (Schemes & Components)
-                // We expand these fields to get the names directly
-                const projectRes = await fetch(
-                    `${baseUrl}/project/${projectKey}?expand=issueTypeScheme,permissions,notificationScheme,components,issueTypeScreenScheme`,
-                    { headers }
-                );
-                
-                if(!projectRes.ok) throw new Error(`Failed to fetch project ${projectKey}`);
-                const projectData = await projectRes.json();
+                // Parallel fetches for specific resource names
+                // We fetch the project, plus specific endpoints for schemes that don't always appear in expand
+                const [projectData, permScheme, notifScheme, issueTypeScreenScheme, statusesData] = await Promise.all([
+                    // 1. Basic Project Info
+                    fetch(`${baseUrl}/project/${projectKey}?expand=issueTypeScheme,components`, { headers }).then(r => r.json()),
+                    
+                    // 2. Permission Scheme Name
+                    fetch(`${baseUrl}/project/${projectKey}/permissionscheme`, { headers }).then(r => r.ok ? r.json() : { name: 'Default Permission Scheme' }),
+                    
+                    // 3. Notification Scheme Name
+                    fetch(`${baseUrl}/project/${projectKey}/notificationscheme`, { headers }).then(r => r.ok ? r.json() : { name: 'Default Notification Scheme' }),
+                    
+                    // 4. Issue Type Screen Scheme
+                    fetch(`${baseUrl}/project/${projectKey}/issuetypescreenscheme`, { headers }).then(r => r.ok ? r.json() : { name: 'N/A' }),
 
-                // 2. Fetch Statuses separately (they are often not in the main project expansion)
-                const statusRes = await fetch(`${baseUrl}/project/${projectKey}/statuses`, { headers });
-                const statusData = statusRes.ok ? await statusRes.json() : [];
-                // Flatten status names
+                    // 5. Statuses
+                    fetch(`${baseUrl}/project/${projectKey}/statuses`, { headers }).then(r => r.ok ? r.json() : [])
+                ]);
+
+                // Sort Statuses Alphabetically
                 const allStatuses = new Set();
-                if (Array.isArray(statusData)) {
-                    statusData.forEach(type => type.statuses.forEach(s => allStatuses.add(s.name)));
+                if (Array.isArray(statusesData)) {
+                    statusesData.forEach(type => type.statuses.forEach(s => allStatuses.add(s.name)));
                 }
+                const sortedStatuses = Array.from(allStatuses).sort((a, b) => a.localeCompare(b));
 
                 return {
                     domain: p.domain,
                     name: projectData.name,
                     key: projectData.key,
                     lead: projectData.lead?.displayName || "Unknown",
-                    issueCount: p.project.issueCount, // Passed from previous step
+                    issueCount: p.project.issueCount,
                     
                     // Deep Data
                     componentCount: (projectData.components || []).length,
                     issueTypeScheme: projectData.issueTypeScheme?.name || "Default",
-                    permissionScheme: projectData.permissions?.name || "Default",
-                    notificationScheme: projectData.notificationScheme?.name || "Default",
-                    issueTypeScreenScheme: projectData.issueTypeScreenScheme?.name || "Default",
-                    statuses: Array.from(allStatuses).join(', '),
-                    allStatuses: Array.from(allStatuses).join(', ') // For the "show more" feature
+                    permissionScheme: permScheme.name || "Default",
+                    notificationScheme: notifScheme.name || "Default",
+                    issueTypeScreenScheme: issueTypeScreenScheme.name || "N/A",
+                    
+                    statuses: sortedStatuses.join(', '),
+                    allStatuses: sortedStatuses.join(', ')
                 };
 
             } catch (e) {
@@ -275,7 +277,6 @@ app.post('/api/confluence/compare-spaces', async (req, res, next) => {
 });
 
 app.post('/api/insights', async (req, res, next) => {
-    // Forward to stats logic for simplicity
     req.url = '/api/stats';
     app.handle(req, res);
 });

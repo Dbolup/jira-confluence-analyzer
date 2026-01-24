@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jira Site Stats</title>
     <style>
-      /* Identical CSS to keep the style consistent */
+      /* Matched Styling */
       * { box-sizing: border-box; }
       body {
         margin: 0;
@@ -36,10 +36,6 @@
         -webkit-text-fill-color: transparent;
         position: relative;
       }
-      h1::after {
-        content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
-        width: 80px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;
-      }
       .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
       .nav-btn {
         padding: 0.8rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px;
@@ -51,23 +47,18 @@
 
       .site-block {
         background: white; border: 2px solid #f0f0f0; border-radius: 16px; padding: 2rem;
-        margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); position: relative; overflow: hidden;
+        margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       }
-      .site-block:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15); }
       .input-group { margin-bottom: 1rem; }
       label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151; }
       input[type="text"] {
         width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 12px; background: #fafafa;
       }
-      input:focus { outline: none; border-color: #667eea; background: white; }
-      
       .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
       button { padding: 1rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; color: white; flex: 1; transition: transform 0.2s; }
       .btn-add { background: linear-gradient(135deg, #10b981, #059669); }
       .btn-submit { background: linear-gradient(135deg, #667eea, #764ba2); flex: 2; }
-      button:hover { transform: translateY(-2px); opacity: 0.9; }
-      button:disabled { opacity: 0.6; cursor: not-allowed; }
-
+      
       .stats-container { margin-top: 3rem; display: none; }
       .stats-container.show { display: block; animation: slideUp 0.5s ease; }
       
@@ -76,7 +67,6 @@
       th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
       td:first-child { text-align: left; font-weight: 600; background: #f8fafc; color: #374151; }
       .metric-value { font-weight: 600; color: #667eea; }
-      
       .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-right: 10px; }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -166,20 +156,29 @@
       });
 
       function renderTable(results) {
+        // Expanded to include all 21 items you asked for
         const metrics = [
-          ['projectCount', '📋 Projects'],
-          ['issueTypeCount', '🎫 Issue Types'],
-          ['workflowCount', '⚙️ Workflows'],
-          ['screenCount', '🖥️ Screens'],
-          ['fieldCount', '🏷️ Custom Fields'],
-          ['statusCount', '📊 Statuses'],
-          ['priorityCount', '⭐ Priorities'],
-          ['dashboardCount', '📊 Dashboards'],
           ['boardCount', '📌 Boards'],
-          ['resolutionCount', '🔄 Resolutions'],
+          ['dashboardCount', '📊 Dashboards'],
+          ['fieldCount', '🏷️ Custom Fields'],
+          ['fieldConfigurationCount', '⚙️ Field Configurations'],
+          ['fieldConfigurationSchemeCount', '🔧 Field Configuration Schemes'],
+          ['filterCount', '🔍 Filters'],
+          ['issueSecuritySchemeCount', '🔒 Issue Security Schemes'],
+          ['issueTypeCount', '🎫 Issue Types'],
+          ['issueTypeSchemeCount', '📝 Issue Type Schemes'],
+          ['issueTypeScreenSchemeCount', '📱 Issue Type Screen Schemes'],
           ['notificationSchemeCount', '📧 Notification Schemes'],
           ['permissionSchemeCount', '🔐 Permission Schemes'],
-          ['issueSecuritySchemeCount', '🔒 Security Schemes']
+          ['priorityCount', '⭐ Priorities'],
+          ['prioritySchemeCount', '🎯 Priority Schemes'],
+          ['projectCount', '📋 Projects'],
+          ['resolutionCount', '🔄 Resolutions'],
+          ['screenCount', '🖥️ Screens'],
+          ['screenSchemeCount', '🖼️ Screen Schemes'],
+          ['statusCount', '📊 Statuses'],
+          ['workflowCount', '⚙️ Workflows'],
+          ['workflowSchemeCount', '🔄 Workflow Schemes']
         ];
 
         let html = '<tr><th>Metric</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
@@ -195,7 +194,6 @@
         document.getElementById('stats-table').innerHTML = html;
       }
 
-      // Initialize
       addSiteInput();
     </script>
   </body>
