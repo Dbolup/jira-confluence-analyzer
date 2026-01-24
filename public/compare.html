@@ -26,6 +26,7 @@
       th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; vertical-align:top; }
       th { background: #667eea; color: white; }
       td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
+      .metric-value { color: #667eea; font-weight: 500; }
     </style>
   </head>
   <body>
@@ -63,8 +64,6 @@
 
     <script>
       let loadedData = [];
-      
-      // Auto-load inputs from previous session
       const saved = JSON.parse(sessionStorage.getItem('jiraCompareSites') || '[]');
       if(saved.length > 0) saved.forEach(url => addInput(url));
       else addInput();
@@ -94,8 +93,7 @@
                 siteUrls.push(inp.value);
             }
         });
-        
-        sessionStorage.setItem('jiraCompareSites', JSON.stringify(siteUrls)); // Save state
+        sessionStorage.setItem('jiraCompareSites', JSON.stringify(siteUrls));
 
         if(sites.length === 0) return alert('Enter a site');
         
@@ -109,7 +107,7 @@
                 body: JSON.stringify({ sites })
             });
             const data = await res.json();
-            loadedData = data; // Store raw data for back navigation
+            loadedData = data;
             
             const container = document.getElementById('selectors');
             container.innerHTML = '';
@@ -164,8 +162,10 @@
                 ['name','📝 Name'], ['lead','👤 Lead'], ['issueCount','🎫 Issues'],
                 ['workflowScheme','🔄 Workflow Scheme'], ['issueTypeScheme','📋 Issue Type Scheme'],
                 ['priorityScheme','🎯 Priority Scheme'], ['fieldConfiguration','⚙️ Field Config'],
-                ['screenScheme','🖼️ Screen Scheme'], ['permissionScheme','🔐 Permissions'],
-                ['notificationScheme','📧 Notifications'], ['statuses','📊 Statuses']
+                // Removed 'screenScheme' here as requested
+                ['issueTypeScreenScheme','📱 Issue Type Screen Scheme'], 
+                ['permissionScheme','🔐 Permissions'], ['notificationScheme','📧 Notifications'], 
+                ['statuses','📊 Statuses']
             ];
 
             metrics.forEach(([k, l]) => {
