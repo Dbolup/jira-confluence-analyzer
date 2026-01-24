@@ -24,6 +24,7 @@
       th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
       th { background: #667eea; color: white; }
       td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
+      .metric-value { color: #667eea; font-weight: 600; }
     </style>
   </head>
   <body>
@@ -153,10 +154,21 @@
             data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.spaceName}</small></th>`);
             html += '</tr></thead><tbody>';
 
-            const metrics = [['owner','👤 Owner'], ['lastModified','📅 Last Mod'], ['pages','📄 Pages'], ['blogposts','📰 Blogs'], ['calendars','📅 Calendars'], ['attachments','📎 Files']];
+            const metrics = [
+                ['owner','👤 Owner'], 
+                ['pages','📄 Pages'], 
+                ['blogposts','📰 Blogs'], 
+                ['databases', '🗄️ Databases'],
+                ['whiteboards', '📝 Whiteboards'],
+                ['folders', '📂 Folders'],
+                ['smartlinks', '🔗 Smart Links'],
+                ['calendars','📅 Calendars'],
+                ['spaceCalendars','🗓️ Space Calendars'],
+                ['attachments','📎 Attachments']
+            ];
 
             metrics.forEach(([k, l]) => {
-                html += `<tr><td>${l}</td>` + data.results.map(r => `<td>${r[k]||0}</td>`).join('') + '</tr>';
+                html += `<tr><td>${l}</td>` + data.results.map(r => `<td><span class="metric-value">${r[k]||0}</span></td>`).join('') + '</tr>';
             });
 
             document.getElementById('results').innerHTML = html + '</tbody></table>';

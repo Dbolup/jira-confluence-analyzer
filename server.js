@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
+// --- HTML Routes ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/jira-stats', (req, res) => res.sendFile(path.join(__dirname, 'public/jira-stats.html')));
 app.get('/compare', (req, res) => res.sendFile(path.join(__dirname, 'public/compare.html')));
@@ -30,10 +30,11 @@ const getBaseUrl = (domain, type = 'jira') => {
     return type === 'confluence' ? `https://${d}.atlassian.net/wiki/rest/api` : `https://${d}.atlassian.net/rest/api/3`;
 };
 
-// 1. Stats (21 Resources)
+// 1. Jira Stats
 app.post('/api/stats', async (req, res, next) => {
   try {
     const { sites } = req.body;
+    if (!sites) throw new Error("No sites provided");
     const results = [];
     for (const site of sites) {
       try {
@@ -74,7 +75,24 @@ app.post('/api/stats', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 2. Compare Projects (Deep)
+// 2. Jira Projects
+app.post('/api/projects', async (req, res, next) => {
+  try {
+    const { sites } = req.body;
+    const results = [];
+    for (const site of sites) {
+      try {
+        const headers = getAuthHeaders(site.email, site.token);
+        const baseUrl = getBaseUrl(site.domain);
+        const data = await jiraUtils.getProjects({ headers, baseUrl });
+        results.push({ domain: site.domain, projects: data.projects });
+      } catch (e) { results.push({ domain: site.domain, error: e.message }); }
+    }
+    res.json({ results });
+  } catch(e) { next(e); }
+});
+
+// 3. Jira Deep Compare
 app.post('/api/compare-projects', async (req, res, next) => {
     try {
         const { projects } = req.body;
@@ -85,38 +103,47 @@ app.post('/api/compare-projects', async (req, res, next) => {
                 const key = p.project.key;
                 const id = p.project.id;
 
-                const [proj, perm, notif, its, ws, itss, ps, fcs, stats] = await Promise.all([
+                const [proj, perm, notif, issueTypeSchemeData, workflowSchemeData, screenSchemeData, allPrioritySchemes, fieldConfigData, stats] = await Promise.all([
                     fetch(`${baseUrl}/project/${key}?expand=components`, { headers }).then(r=>r.json()),
                     fetch(`${baseUrl}/project/${key}/permissionscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
                     fetch(`${baseUrl}/project/${key}/notificationscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
-                    fetch(`${baseUrl}/project/${key}/issuetypescheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
-                    fetch(`${baseUrl}/project/${key}/workflowscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
-                    fetch(`${baseUrl}/project/${key}/issuetypescreenscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
-                    fetch(`${baseUrl}/project/${key}/priorityscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
+                    fetch(`${baseUrl}/issuetypescheme/project?projectId=${id}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
+                    fetch(`${baseUrl}/workflowscheme/project?projectId=${id}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
+                    fetch(`${baseUrl}/issuetypescreenscheme/project?projectId=${id}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
+                    fetch(`${baseUrl}/priorityscheme`, { headers }).then(r=>r.ok?r.json():{values:[]}),
                     fetch(`${baseUrl}/fieldconfigurationscheme/project?projectId=${id}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
                     fetch(`${baseUrl}/project/${key}/statuses`, { headers }).then(r=>r.ok?r.json():[])
                 ]);
 
-                // Fix: Team-managed projects often return 404 for schemes or generic names.
-                // We check if it is a Next Gen project
-                const isTeamManaged = proj.style === 'next-gen';
-                const schemeLabel = isTeamManaged ? 'Team-Managed (N/A)' : 'Default';
+                let priorityName = "Default Priority Scheme";
+                if (allPrioritySchemes.values) {
+                    const found = allPrioritySchemes.values.find(scheme => 
+                        scheme.projects && scheme.projects.values && 
+                        scheme.projects.values.some(projRef => projRef.id === id)
+                    );
+                    if (found) priorityName = found.name;
+                }
 
-                let fcName = schemeLabel;
-                if (fcs.values && fcs.values.length > 0) fcName = fcs.values[0].fieldConfigurationScheme?.name || "Custom";
+                const workflowName = workflowSchemeData.values?.[0]?.workflowScheme?.name || "Default";
+                const issueTypeName = issueTypeSchemeData.values?.[0]?.issueTypeScheme?.name || "Default";
+                const screenSchemeName = screenSchemeData.values?.[0]?.issueTypeScreenScheme?.name || "Default";
+                const fieldConfigName = fieldConfigData.values?.[0]?.fieldConfigurationScheme?.name || "Default Field Configuration";
 
                 const allStats = new Set();
                 if(Array.isArray(stats)) stats.forEach(t => t.statuses.forEach(s => allStats.add(s.name)));
-                
+
+                const isTeamManaged = proj.style === 'next-gen';
+                const label = isTeamManaged ? 'Team-Managed' : '';
+
                 return {
                     domain: p.domain, name: proj.name, key: proj.key, lead: proj.lead?.displayName, issueCount: p.project.issueCount,
-                    workflowScheme: isTeamManaged ? 'Team-Managed' : (ws.name||schemeLabel),
-                    issueTypeScheme: isTeamManaged ? 'Team-Managed' : (its.name||schemeLabel),
-                    priorityScheme: isTeamManaged ? 'Team-Managed' : (ps.name||schemeLabel),
-                    fieldConfiguration: isTeamManaged ? 'Team-Managed' : fcName,
-                    permissionScheme: isTeamManaged ? 'Team-Managed' : (perm.name||schemeLabel),
-                    notificationScheme: isTeamManaged ? 'Team-Managed' : (notif.name||schemeLabel),
-                    issueTypeScreenScheme: isTeamManaged ? 'Team-Managed' : (itss.name||schemeLabel),
+                    workflowScheme: isTeamManaged ? label : workflowName,
+                    issueTypeScheme: isTeamManaged ? label : issueTypeName,
+                    priorityScheme: isTeamManaged ? label : priorityName,
+                    fieldConfiguration: isTeamManaged ? label : fieldConfigName,
+                    permissionScheme: isTeamManaged ? label : (perm.name||'Default'),
+                    notificationScheme: isTeamManaged ? label : (notif.name||'Default'),
+                    issueTypeScreenScheme: isTeamManaged ? label : screenSchemeName,
                     componentCount: (proj.components||[]).length,
                     statuses: Array.from(allStats).sort().join(', ')
                 };
@@ -126,7 +153,7 @@ app.post('/api/compare-projects', async (req, res, next) => {
     } catch(e) { next(e); }
 });
 
-// 3. Confluence Routes
+// 4. Confluence Stats
 app.post('/api/confluence/stats', async (req, res, next) => {
   try {
     const { sites } = req.body;
@@ -141,6 +168,7 @@ app.post('/api/confluence/stats', async (req, res, next) => {
   } catch(e) { next(e); }
 });
 
+// 5. Confluence Spaces
 app.post('/api/confluence/spaces', async (req, res, next) => {
   try {
     const { sites } = req.body;
@@ -155,58 +183,78 @@ app.post('/api/confluence/spaces', async (req, res, next) => {
   } catch(e) { next(e); }
 });
 
+// 6. Confluence Deep Compare (UPDATED with new types)
 app.post('/api/confluence/compare-spaces', async (req, res, next) => {
   try {
     const { spaces } = req.body;
     const results = [];
+    
     for (const item of spaces) {
+      try {
         const headers = getAuthHeaders(item.site.email, item.site.token);
         const baseUrl = getBaseUrl(item.domain, 'confluence');
         const key = item.spaceKey;
+
+        // 1. Pages, Blogs, Attachments
+        const counts = await confluenceUtils.getSpaceContentCounts({ headers, baseUrl, spaceKey: key });
+
+        // 2. Owner (Creator of homepage)
+        let owner = "Unknown";
         try {
-            const counts = await confluenceUtils.getSpaceContentCounts({ headers, baseUrl, spaceKey: key });
-            
-            // Fix: Better Owner/Date Fetch
-            let owner = "Unknown";
             const spaceRes = await fetch(`${baseUrl}/space/${key}?expand=homepage.history.createdBy`, { headers });
             const spaceData = await spaceRes.json();
             if(spaceData.homepage?.history?.createdBy) owner = spaceData.homepage.history.createdBy.displayName;
+        } catch(e) {}
 
-            // Fix: Last Activity
-            let lastModified = "N/A";
-            const hist = await fetch(`${baseUrl}/search?cql=space="${key}" order by lastModified desc limit 1`, { headers }).then(r=>r.json());
-            if(hist.results?.[0]) {
-                const d = hist.results[0].history?.lastUpdated?.when || hist.results[0].version?.when;
-                if(d) lastModified = new Date(d).toLocaleDateString();
-            }
+        // 3. New Specific Counts via CQL
+        const countByCQL = async (cql) => {
+            try {
+                const url = `${baseUrl}/search?cql=${encodeURIComponent(cql)}&limit=0`;
+                const res = await fetch(url, { headers });
+                const data = await res.json();
+                return data.totalSize || 0;
+            } catch(e) { return "N/A"; }
+        };
 
-            // Fix: Calendar Count
-            let calendars = 0;
-            const calRes = await fetch(`${baseUrl}/search?cql=space="${key}" AND (type="custom" OR type="calendar") AND content.type="com.atlassian.confluence.extra.calendar:calendar-content-type"&limit=0`, { headers }).then(r=>r.json());
-            calendars = calRes.totalSize || 0;
+        const [dbCount, wbCount, folderCount, smartLinkCount, calendarCount, spaceCalendarCount] = await Promise.all([
+            countByCQL(`space="${key}" AND type="database"`),
+            countByCQL(`space="${key}" AND type="whiteboard"`),
+            countByCQL(`space="${key}" AND type="folder"`),
+            countByCQL(`space="${key}" AND type="smart-link"`),
+            countByCQL(`space="${key}" AND type="calendar"`), // "Calendars"
+            countByCQL(`space="${key}" AND content.type="com.atlassian.confluence.extra.calendar:calendar-content-type"`) // "Space Calendars" (Custom Content)
+        ]);
 
-            results.push({ domain: item.domain, spaceName: item.spaceName, spaceKey: key, owner, lastModified, calendars, ...counts });
-        } catch (e) { results.push({ domain: item.domain, spaceKey: key, error: e.message }); }
+        results.push({
+          domain: item.domain,
+          spaceName: item.spaceName,
+          spaceKey: key,
+          owner: owner,
+          // New Fields
+          databases: dbCount,
+          whiteboards: wbCount,
+          folders: folderCount,
+          smartlinks: smartLinkCount,
+          calendars: calendarCount,
+          spaceCalendars: spaceCalendarCount,
+          ...counts
+        });
+      } catch (e) {
+        results.push({ domain: item.domain, spaceKey: item.spaceKey, error: e.message });
+      }
     }
     res.json({ results });
   } catch(e) { next(e); }
 });
 
-app.post('/api/projects', async (req, res, next) => {
-  // Reuse existing logic for dropdown population
-  try {
-    const { sites } = req.body;
-    const results = [];
-    for (const site of sites) {
-        const headers = getAuthHeaders(site.email, site.token);
-        const baseUrl = getBaseUrl(site.domain);
-        try {
-            const data = await jiraUtils.getProjects({ headers, baseUrl });
-            results.push({ domain: site.domain, projects: data.projects });
-        } catch (e) { results.push({ domain: site.domain, error: e.message }); }
-    }
-    res.json({ results });
-  } catch(e) { next(e); }
+app.post('/api/insights', async (req, res, next) => {
+    req.url = '/api/stats';
+    app.handle(req, res);
+});
+
+app.use((err, req, res, next) => {
+    console.error("Global Server Error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
 app.listen(port, () => console.log(`Running on http://localhost:${port}`));
