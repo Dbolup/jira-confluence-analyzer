@@ -1,175 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
     <title>Confluence Stats</title>
     <style>
-      body { margin: 0; font-family: system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
-      .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+      body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); padding: 2rem; color: #1c1e21; }
+      .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; }
       h1 { text-align: center; color: #4c1d95; }
-      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
-      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; }
-      .nav a:hover { background: #e2e8f0; }
-      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #ddd; }
-      input { width: 100%; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 8px; margin-top: 5px; }
-      button { padding: 1rem 2rem; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 1rem; }
-      .btn-add { background: #10b981; }
-      .btn-go { background: #667eea; width: 100%; margin-top: 1rem; }
-      .btn-upload { background: #f59e0b; width: 100%; margin-top: 1rem; }
-      .btn-clear { background: #ef4444; float: left; margin-bottom: 1rem; }
-      .btn-pdf { background: #475569; float: right; margin-bottom: 1rem; }
-      
-      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 12px; overflow: hidden; }
-      th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
-      th { background: #667eea; color: white; }
-      td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
-      
-      .save-btn {
-        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); 
-        padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.7rem; margin-left: 8px;
-      }
-      .save-btn:hover { background: rgba(255,255,255,0.4); }
+      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+      .nav-btn { padding: 0.8rem 1.5rem; background: #f1f5f9; color: #64748b; border-radius: 12px; text-decoration: none; font-weight: 600; }
+      .active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+      .site-block { background: white; border: 2px solid #f0f0f0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; }
+      select { width: 100%; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 8px; }
+      .btn { padding: 1rem 2rem; border: none; border-radius: 12px; cursor: pointer; color: white; font-weight: bold; }
+      .btn-add { background: #10b981; } .btn-go { background: #667eea; } .btn-up { background: #f59e0b; } .btn-clr { background: #ef4444; }
+      table { width: 100%; margin-top: 2rem; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+      th, td { padding: 1rem; border-bottom: 1px solid #f1f5f9; text-align: center; }
+      th { background: #667eea; color: white; } td:first-child { text-align: left; font-weight: 600; background: #f8fafc; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <h1>Confluence Overview</h1>
-      <div class="nav">
-        <a href="/">🏠 Dashboard</a>
-        <a href="/confluence-stats" style="color:#667eea; background:#eff6ff">📊 Stats</a>
-        <a href="/confluence-compare">⚖️ Compare Spaces</a>
-      </div>
-
-      <div id="inputs"></div>
-      
-      <input type="file" id="state-upload" accept=".json" style="display:none" onchange="handleFileUpload(this)">
-
-      <div style="display:flex; gap:1rem; margin-top:1rem;">
-          <button class="btn-add" style="flex:1" onclick="addSite()">➕ Add Site</button>
-          <button class="btn-upload" style="flex:1; margin-top:0" onclick="document.getElementById('state-upload').click()">📂 Upload State</button>
+      <h1>Confluence Stats</h1>
+      <div class="nav-buttons">
+        <a href="/" class="nav-btn">🏠 Home</a><a href="/confluence-stats" class="nav-btn active">📊 Stats</a><a href="/confluence-compare" class="nav-btn">⚖️ Compare</a>
       </div>
       
-      <button class="btn-go" onclick="analyze()">Analyze</button>
-
-      <div id="results" style="display:none; margin-top:2rem">
-        <button class="btn-clear" onclick="clearResults()">🗑️ Clear Results</button>
-        <button class="btn-pdf" onclick="window.print()">📄 Save as PDF</button>
-        <div style="clear:both"></div>
-        <table id="table"></table>
+      <div id="site-inputs"></div>
+      <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
+      
+      <div style="display:flex; gap:1rem; margin-top:1rem">
+        <button class="btn btn-add" onclick="addInput()">➕ Add Source</button>
+        <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload State</button>
+        <button class="btn btn-go" style="flex:2" onclick="run()">📊 Analyze</button>
+        <button class="btn btn-clr" onclick="reset()">🗑️ Clear</button>
       </div>
+      <div id="table-area"></div>
     </div>
 
     <script>
-      let count = 0;
-      let allResults = [];
-      addSite();
+      let globalData = [];
+      const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
+      const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
 
-      function addSite() {
-        if (!localStorage.getItem('atlassianGlobalCreds')) return window.location.href = '/credentials';
+      addInput();
+
+      function addInput() {
+        if(cloudSites.length===0 && dcConns.length===0) return window.location.href='/credentials';
         const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `<label>Site URL</label><input class="site-in" placeholder="company.atlassian.net">`;
-        document.getElementById('inputs').appendChild(div);
-        count++;
+        div.className = 'site-block';
+        let opts = '<option value="">-- Select Source --</option>';
+        if(cloudSites.length) { opts += '<optgroup label="Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="cloud-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
+        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="dc-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
+        div.innerHTML = `<select class="src-select">${opts}</select>`;
+        document.getElementById('site-inputs').appendChild(div);
       }
 
-      function clearResults() {
-          allResults = [];
-          document.getElementById('results').style.display = 'none';
-          document.getElementById('table').innerHTML = '';
-          document.getElementById('inputs').innerHTML = '';
-          addSite();
-      }
+      function reset() { globalData=[]; document.getElementById('table-area').innerHTML=''; document.getElementById('site-inputs').innerHTML=''; addInput(); }
 
-      function handleFileUpload(input) {
-          const file = input.files[0];
-          if (!file) return;
-
+      function loadFile(input) {
           const reader = new FileReader();
-          reader.onload = function(e) {
-              try {
-                  const data = JSON.parse(e.target.result);
-                  if (!data.domain) throw new Error("Invalid state file");
-                  
-                  data.isSavedState = true;
-                  data.uploadDate = new Date().toLocaleDateString();
-
-                  allResults.push(data);
-                  render(allResults);
-                  document.getElementById('results').style.display = 'block';
-              } catch (err) {
-                  alert("Error: " + err.message);
-              }
+          reader.onload = e => {
+              const d = JSON.parse(e.target.result);
+              d.isSaved = true; 
+              globalData.push(d); render();
           };
-          reader.readAsText(file);
+          reader.readAsText(input.files[0]);
           input.value = '';
       }
 
-      window.downloadState = function(index) {
-          const data = allResults[index];
-          const filename = `confluence-state-${data.domain}-${new Date().toISOString().slice(0,10)}.json`;
-          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-          const url = window.URL.createObjectURL(blob);
+      async function run() {
+          const selects = document.querySelectorAll('.src-select');
+          const sites = [];
+          selects.forEach(s => {
+              if(!s.value) return;
+              const [type, idx] = s.value.split('-');
+              if(type==='cloud') { const c = cloudSites[idx]; sites.push({ type:'cloud', domain:c.domain, email:c.email, token:c.token }); }
+              else { const d = dcConns[idx]; sites.push({ type:'dc', ...d }); }
+          });
+
+          if(sites.length) {
+              try {
+                  const res = await fetch('/api/confluence/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sites}) });
+                  const data = await res.json();
+                  globalData = [...globalData, ...data.results];
+                  render();
+              } catch(e) { alert(e.message); }
+          }
+      }
+
+      window.dl = idx => {
+          const d = globalData[idx];
           const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          window.URL.revokeObjectURL(url);
+          a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)], {type:'application/json'}));
+          a.download = `conf-stats-${d.domain}.json`; a.click();
       };
 
-      async function analyze() {
-        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
-        const inputs = document.querySelectorAll('.site-in');
-        const sites = [];
-        
-        inputs.forEach(inp => {
-            if(inp.value) sites.push({ domain: inp.value, email: creds.email, token: creds.token });
-        });
-
-        if(sites.length === 0 && allResults.length === 0) return alert("Please add a site or upload state.");
-
-        const btn = document.querySelector('.btn-go');
-        const oldText = btn.innerText;
-        btn.innerText = 'Loading...';
-        btn.disabled = true;
-        
-        try {
-            if(sites.length > 0) {
-                const res = await fetch('/api/confluence/stats', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sites })
-                });
-                const data = await res.json();
-                allResults = [...allResults, ...data.results];
-            }
-            render(allResults);
-            document.getElementById('results').style.display = 'block';
-        } catch(e) { alert(e); }
-        btn.innerText = oldText;
-        btn.disabled = false;
-      }
-
-      function render(data) {
-        const metrics = [
-            ['total', '📚 Total Spaces'],
-            ['active', '✅ Active Spaces'],
-            ['archived', '📦 Archived Spaces'],
-            ['global', '🌐 Global Spaces'],
-            ['personal', '👤 Personal Spaces']
-        ];
-        
-        let html = '<thead><tr><th>Metric</th>' + data.map((d, idx) => {
-             let title = d.domain;
-             if(d.isSavedState) title += `<br><span style="font-size:0.7em; opacity:0.8; font-weight:normal">📂 Saved: ${d.uploadDate}</span>`;
-             return `<th>${title} <button class="save-btn" onclick="downloadState(${idx})">⬇️</button></th>`;
-        }).join('') + '</tr></thead><tbody>';
-
-        metrics.forEach(([key, label]) => {
-            html += `<tr><td>${label}</td>` + data.map(d => `<td>${d.error ? '❌' : (d[key] || 0)}</td>`).join('') + '</tr>';
-        });
-        document.getElementById('table').innerHTML = html + '</tbody>';
+      function render() {
+          const keys = [['total','Total Spaces'],['active','Active Spaces'],['archived','Archived'],['global','Global Spaces'],['personal','Personal Spaces'],['type','Source Type']];
+          let h = '<table><thead><tr><th>Metric</th>';
+          globalData.forEach((d,i) => h+=`<th>${d.domain}${d.isSaved?'<br>📂 Saved':''} <button onclick="dl(${i})">⬇️</button></th>`);
+          h+='</tr></thead><tbody>';
+          keys.forEach(([k,l]) => {
+              h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';
+          });
+          document.getElementById('table-area').innerHTML = h + '</tbody></table>';
       }
     </script>
-  </body>
+</body>
 </html>

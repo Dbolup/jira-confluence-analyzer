@@ -2,227 +2,121 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Jira Project Comparison</title>
+    <title>Jira Comparison</title>
     <style>
-        body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-        h1 { color: #1e293b; text-align: center; margin-bottom: 2rem; }
-        
-        /* Navigation */
+        body { margin: 0; font-family: -apple-system, sans-serif; background: #f1f5f9; padding: 2rem; color:#1e293b; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; }
+        h1 { text-align: center; color: #3b82f6; }
         .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
-        .nav a { padding: 0.8rem 1.5rem; background: #f1f5f9; color: #64748b; text-decoration: none; border-radius: 12px; font-weight: 600; }
-        .nav a.active { background: #667eea; color: white; }
-
-        /* Input Rows */
-        .row-card { background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-end; }
-        .col { flex: 1; }
-        label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 5px; }
-        select { width: 100%; padding: 0.8rem; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
-        
-        /* Buttons */
-        .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-        .btn-add { background: #10b981; }
-        .btn-run { background: #6366f1; }
-        .btn-del { background: #ef4444; padding: 0.8rem; }
-        
-        /* The Deep Table */
-        .table-wrapper { overflow-x: auto; margin-top: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        th { background: #667eea; color: white; text-align: center; min-width: 200px; }
-        td:first-child { text-align: left; background: #f8fafc; font-weight: 600; color: #334155; position: sticky; left: 0; z-index: 10; border-right: 2px solid #e2e8f0; }
-        .metric-value { color: #4f46e5; font-weight: 500; }
-
-        /* View More Link */
-        .more-link {
-            color: #667eea;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 8px;
-            display: inline-block;
-            background: #eff6ff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid #dbeafe;
-        }
-        .more-link:hover { 
-            background: #667eea; 
-            color: white; 
-            border-color: #667eea;
-        }
+        .nav a { padding: 0.8rem 1.5rem; background: #e2e8f0; color: #64748b; text-decoration: none; border-radius: 8px; font-weight: 600; }
+        .active { background: #3b82f6; color: white; }
+        .row-card { background: #f8fafc; padding: 1rem; border-radius: 8px; display: flex; gap: 1rem; margin-bottom: 1rem; border:1px solid #e2e8f0; }
+        select, input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color:white; }
+        .btn-add { background: #10b981; } .btn-run { background: #3b82f6; } .btn-del { background: #ef4444; }
+        table { width: 100%; border-collapse: collapse; margin-top:2rem; }
+        th, td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: top; }
+        th { background: #3b82f6; color: white; } td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
+        .more-link { color: #3b82f6; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: block; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Jira Project Comparison</h1>
         <div class="nav">
-            <a href="/">🏠 Dashboard</a>
-            <a href="/credentials">🔑 Credentials</a>
-            <a href="/jira-stats">📊 Stats</a>
-            <a href="#" class="active">🔄 Compare</a>
+            <a href="/">🏠 Home</a><a href="/jira-stats">📊 Stats</a><a href="/compare" class="active">🔄 Compare</a>
         </div>
-
         <div id="rows-container"></div>
-        
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+        <div style="margin-top: 1.5rem;">
             <button class="btn btn-add" onclick="addRow()">➕ Add Project</button>
             <button class="btn btn-run" onclick="runCompare()">🔍 Run Comparison</button>
-            <button class="btn" style="background:#64748b; margin-left:auto" onclick="window.print()">📄 Print / PDF</button>
         </div>
-
         <div id="results-area"></div>
     </div>
 
     <script>
-        const cloudCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds') || '{}');
-        const dcCreds = JSON.parse(localStorage.getItem('dcConnections') || '[]');
-
+        const defCreds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
+        const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
+        const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
         addRow(); addRow();
 
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row-card';
-            
             let opts = '<option value="">-- Select Source --</option>';
-            if(cloudCreds.email) opts += `<option value="cloud">☁️ Cloud (${cloudCreds.email})</option>`;
-            dcCreds.forEach((dc, i) => opts += `<option value="dc-${i}">🏢 DC: ${dc.name}</option>`);
-
+            if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
+            if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
+            
             div.innerHTML = `
-                <div class="col" style="flex:0.8">
+                <div style="flex:1">
                     <label>Source</label>
-                    <select onchange="loadProjects(this)">${opts}</select>
+                    <select class="src-select" onchange="loadProjs(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select>
+                    <input class="man-dom" placeholder="domain (using default creds)" style="display:none; margin-top:5px" onblur="loadProjs(this.previousElementSibling)">
                 </div>
-                <div class="col" style="flex:1.5">
-                    <label>Project</label>
-                    <select class="project-select" disabled><option>Select source first...</option></select>
-                </div>
+                <div style="flex:1.5"><label>Project</label><select class="p-select" disabled></select></div>
                 <button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>
             `;
             document.getElementById('rows-container').appendChild(div);
         }
 
-        async function loadProjects(srcSelect) {
-            const val = srcSelect.value;
-            const projSelect = srcSelect.parentElement.nextElementSibling.querySelector('select');
+        async function loadProjs(el) {
+            const val = el.value;
+            const manInp = el.nextElementSibling;
+            const pSel = el.parentElement.nextElementSibling.querySelector('select');
             
-            if(!val) { projSelect.disabled=true; return; }
-
-            let config = {};
-            if(val === 'cloud') {
-                const domain = prompt("Enter Cloud Domain (e.g. site.atlassian.net):");
-                if(!domain) return srcSelect.value = "";
-                config = { type: 'cloud', email: cloudCreds.email, token: cloudCreds.token, domain };
+            if(val === 'manual') {
+                manInp.style.display = 'block';
+                if(!manInp.value) return; // Wait for input
+                if(!defCreds.email) return alert('Save default creds first');
+                var config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token };
             } else {
-                config = { type: 'dc', ...dcCreds[val.split('-')[1]] };
+                manInp.style.display = 'none';
+                if(!val) { pSel.disabled=true; return; }
+                const [type, idx] = val.split('-');
+                if(type==='c') { const c = cloudSites[idx]; var config = { type:'cloud', ...c }; }
+                else { const d = dcConns[idx]; var config = { type:'dc', ...d }; }
             }
 
-            projSelect.innerHTML = '<option>Loading...</option>';
-            
+            pSel.innerHTML = '<option>Loading...</option>';
             try {
-                const res = await fetch('/api/projects', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sources: [config] })
-                });
+                const res = await fetch('/api/projects', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ sources: [config] }) });
                 const data = await res.json();
-                
-                if(data.results[0].error) throw new Error(data.results[0].error);
-
-                let html = '<option value="">-- Select Project --</option>';
-                data.results[0].projects.forEach(p => {
-                    html += `<option value="${p.key}" data-source='${JSON.stringify(config)}' data-id="${p.id}">${p.name} (${p.key})</option>`;
-                });
-                projSelect.innerHTML = html;
-                projSelect.disabled = false;
-            } catch(e) { 
-                projSelect.innerHTML = `<option>Error: ${e.message}</option>`; 
-            }
+                let html = '<option value="">Select Project</option>';
+                data.results[0].projects.forEach(p => html += `<option value="${p.key}" data-id="${p.id}" data-src='${JSON.stringify(config)}'>${p.name} (${p.key})</option>`);
+                pSel.innerHTML = html; pSel.disabled = false;
+            } catch(e) { pSel.innerHTML = '<option>Error</option>'; }
         }
 
         async function runCompare() {
+            const btn = document.querySelector('.btn-run');
+            btn.innerText = 'Processing...';
             const selection = [];
-            document.querySelectorAll('.project-select').forEach(s => {
-                if(s.value && !s.disabled) {
-                    const opt = s.options[s.selectedIndex];
-                    selection.push({
-                        source: JSON.parse(opt.getAttribute('data-source')),
-                        projectKey: s.value,
-                        projectId: opt.getAttribute('data-id')
-                    });
-                }
+            document.querySelectorAll('.p-select').forEach(s => {
+                if(s.value) selection.push({ source: JSON.parse(s.selectedOptions[0].dataset.src), projectKey: s.value, projectId: s.selectedOptions[0].dataset.id });
             });
-
-            if(!selection.length) return alert("Please select at least one project");
-
-            const area = document.getElementById('results-area');
-            area.innerHTML = '<h3 style="text-align:center; color:#667eea">🚀 Crunching deep data...</h3>';
-
-            const res = await fetch('/api/compare-projects', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ selection })
-            });
+            if(!selection.length) return alert('Select projects');
+            
+            const res = await fetch('/api/compare-projects', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ selection }) });
             const data = await res.json();
-
-            // === UPDATED METRICS ===
-            // Added 'componentCount' here
-            const metrics = [
-                ['name', '📝 Project Name'],
-                ['lead', '👤 Project Lead'],
-                ['issueCount', '🎫 Issue Count'],
-                ['componentCount', '🧩 Components'], 
-                ['workflowScheme', '🔄 Workflow Scheme'],
-                ['issueTypeScheme', '📋 Issue Type Scheme'],
-                ['priorityScheme', '🎯 Priority Scheme'],
-                ['fieldConfiguration', '⚙️ Field Config'],
-                ['permissionScheme', '🔐 Permissions'],
-                ['notificationScheme', '📧 Notifications'],
-                ['issueTypeScreenScheme', '📱 Issue Type Screen Scheme'],
-                ['statuses', '📊 Statuses']
-            ];
-
-            let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
-            data.results.forEach(r => html += `<th>${r.source}<br><span style="font-size:0.8em; opacity:0.8">${r.key} (${r.type})</span></th>`);
-            html += '</tr></thead><tbody>';
-
-            metrics.forEach(([key, label]) => {
-                html += `<tr><td>${label}</td>` + 
-                data.results.map(r => {
-                    if(r.error) return `<td style="color:red">Error</td>`;
-                    let val = r[key] || '-';
-                    
-                    if(key === 'statuses' && val.length > 60) {
-                        const uid = 's' + Math.random().toString(36).substr(2,9);
-                        const short = val.substring(0, 60);
-                        return `<td>
-                            <span id="short-${uid}">${short}...</span>
-                            <span id="full-${uid}" style="display:none">${val}</span>
-                            <br>
-                            <div onclick="toggleText('${uid}')" class="more-link" id="btn-${uid}">View More</div>
-                        </td>`;
+            
+            const metrics = [['name','Name'],['lead','Lead'],['issueCount','Issues'],['componentCount','Components'],['workflowScheme','Workflow Scheme'],['issueTypeScheme','Issue Type Scheme'],['priorityScheme','Priority Scheme'],['statuses','Statuses']];
+            let html = '<table><thead><tr><th>Metric</th>'+data.results.map(r=>`<th>${r.source.domain||r.source.name}<br>${r.key} (${r.type})</th>`).join('')+'</tr></thead><tbody>';
+            metrics.forEach(([k,l]) => {
+                html += `<tr><td>${l}</td>` + data.results.map(r => {
+                    let val = r[k]||'-';
+                    if(k==='statuses' && val.length>60) {
+                        const id = Math.random().toString(36).substr(2,9);
+                        return `<td><span id="s-${id}">${val.substring(0,60)}...</span><span id="f-${id}" style="display:none">${val}</span><div class="more-link" onclick="toggle('${id}')">View More</div></td>`;
                     }
-                    return `<td><span class="metric-value">${val}</span></td>`;
+                    return `<td>${val}</td>`;
                 }).join('') + '</tr>';
             });
-
-            area.innerHTML = html + '</tbody></table></div>';
+            document.getElementById('results-area').innerHTML = html + '</tbody></table>';
+            btn.innerText = '🔍 Run Comparison';
         }
-
-        function toggleText(id) {
-            const shortSpan = document.getElementById('short-' + id);
-            const fullSpan = document.getElementById('full-' + id);
-            const btn = document.getElementById('btn-' + id);
-
-            if(fullSpan.style.display === 'none') {
-                fullSpan.style.display = 'inline';
-                shortSpan.style.display = 'none';
-                btn.innerText = 'Show Less';
-            } else {
-                fullSpan.style.display = 'none';
-                shortSpan.style.display = 'inline';
-                btn.innerText = 'View More';
-            }
+        window.toggle = id => {
+            const s=document.getElementById('s-'+id), f=document.getElementById('f-'+id);
+            if(f.style.display==='none'){ f.style.display='inline'; s.style.display='none'; } else { f.style.display='none'; s.style.display='inline'; }
         }
     </script>
 </body>

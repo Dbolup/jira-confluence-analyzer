@@ -1,274 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jira Site Stats</title>
+<head>
+    <meta charset="UTF-8">
+    <title>Jira Stats</title>
     <style>
-      /* Matched Styling */
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #1c1e21;
-        padding: 2rem;
-        min-height: 100vh;
-      }
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        padding: 3rem;
-        animation: slideUp 0.6s ease-out;
-      }
-      @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-      h1 {
-        font-weight: 700; font-size: 2.5rem; text-align: center; margin-bottom: 1rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      }
-      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
-      .nav-btn {
-        padding: 0.8rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px;
-        cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block;
-      }
-      .nav-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
-      .nav-btn.inactive { background: #f1f5f9; color: #64748b; }
-      .nav-btn.inactive:hover { background: #e2e8f0; transform: translateY(-2px); }
-
-      .site-block {
-        background: white; border: 2px solid #f0f0f0; border-radius: 16px; padding: 2rem;
-        margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      }
-      .input-group { margin-bottom: 1rem; }
-      label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151; }
-      input[type="text"] {
-        width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 12px; background: #fafafa;
-      }
-      .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
-      button { padding: 1rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; color: white; flex: 1; transition: transform 0.2s; }
-      .btn-add { background: linear-gradient(135deg, #10b981, #059669); }
-      .btn-upload { background: #f59e0b; color: white; }
-      .btn-submit { background: linear-gradient(135deg, #667eea, #764ba2); flex: 2; }
-      .btn-clear { background: #ef4444; flex: 0.5; }
+      body { margin: 0; font-family: -apple-system, sans-serif; background: #f1f5f9; padding: 2rem; color: #1e293b; }
+      .container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+      h1 { text-align: center; color: #3b82f6; margin-bottom: 2rem; }
+      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+      .nav-btn { padding: 0.8rem 1.5rem; background: #e2e8f0; color: #64748b; border-radius: 8px; text-decoration: none; font-weight: 600; }
+      .active { background: #3b82f6; color: white; }
       
-      .stats-container { margin-top: 3rem; display: none; }
-      .stats-container.show { display: block; animation: slideUp 0.5s ease; }
+      .site-block { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 10px; }
+      select, input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+      .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color:white; }
+      .btn-add { background: #10b981; } .btn-go { background: #3b82f6; } .btn-up { background: #f59e0b; } .btn-clr { background: #ef4444; }
       
-      table { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-      th, td { padding: 1.2rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
-      th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
-      td:first-child { text-align: left; font-weight: 600; background: #f8fafc; color: #374151; }
-      .metric-value { font-weight: 600; color: #667eea; }
-      
-      .save-btn {
-        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); 
-        padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.7rem; margin-left: 8px;
-      }
-      .save-btn:hover { background: rgba(255,255,255,0.4); }
+      table { width: 100%; margin-top: 2rem; border-collapse: collapse; }
+      th, td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: center; }
+      th { background: #3b82f6; color: white; } td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
       <h1>Jira Site Stats</h1>
-      
       <div class="nav-buttons">
-        <a href="/" class="nav-btn inactive">🏠 Dashboard</a>
-        <div class="nav-btn active">📊 Jira Stats</div>
-        <a href="/compare" class="nav-btn inactive">🔄 Jira Compare</a>
-        <a href="/insights" class="nav-btn inactive">🔍 Detailed Insights</a>
+        <a href="/" class="nav-btn">🏠 Home</a><a href="/jira-stats" class="nav-btn active">📊 Stats</a><a href="/compare" class="nav-btn">🔄 Compare</a>
       </div>
-
-      <form id="site-form">
-        <div id="site-inputs"></div>
-        
-        <input type="file" id="state-upload" accept=".json" style="display:none" onchange="handleFileUpload(this)">
-
-        <div class="button-group">
-          <button type="button" class="btn-add" onclick="addSiteInput()">➕ Add Site</button>
-          <button type="button" class="btn-upload" onclick="document.getElementById('state-upload').click()">📂 Upload State</button>
-          <button type="submit" class="btn-submit" id="submit-btn">📊 Get Stats</button>
-          <button type="button" class="btn-clear" onclick="clearResults()">🗑️ Clear</button>
-        </div>
-      </form>
-
-      <div class="stats-container" id="stats-container">
-        <table id="stats-table"></table>
+      
+      <div id="site-inputs"></div>
+      <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
+      
+      <div style="display:flex; gap:1rem; margin-top:1rem">
+        <button class="btn btn-add" onclick="addInput()">➕ Add Source</button>
+        <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload</button>
+        <button class="btn btn-go" style="flex:2" onclick="run()">🚀 Analyze</button>
+        <button class="btn btn-clr" onclick="reset()">🗑️ Clear</button>
       </div>
+      <div id="table-area"></div>
     </div>
 
     <script>
-      let siteCounter = 0;
-      let allResults = []; // Stores both Live and Uploaded results
+      let globalData = [];
+      const defCreds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
+      const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
+      const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
 
-      function addSiteInput() {
-        const savedCreds = localStorage.getItem('atlassianGlobalCreds');
-        if (!savedCreds) {
-            if(confirm('No credentials found. Go to setup?')) window.location.href = '/credentials';
-            return;
-        }
+      addInput();
 
-        const container = document.getElementById('site-inputs');
+      function addInput() {
         const div = document.createElement('div');
         div.className = 'site-block';
+        
+        let opts = '<option value="">-- Select Saved Source --</option>';
+        if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
+        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
+
         div.innerHTML = `
-          <div class="input-group">
-            <label>🌐 Site URL</label>
-            <input type="text" name="domain-${siteCounter}" placeholder="mycompany.atlassian.net" required />
-          </div>
-          <div style="background: #e0f2fe; padding: 0.8rem; border-radius: 8px; color: #0891b2; font-weight: 600; font-size: 0.9rem;">
-            ✅ Using saved credentials
-          </div>
+            <div style="display:flex; gap:10px; align-items:center">
+                <div style="flex:1">
+                    <select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select>
+                </div>
+                <div class="manual-box" style="flex:1; display:none">
+                    <input class="man-dom" placeholder="company (uses default creds)">
+                </div>
+                <button class="btn btn-clr" style="padding:0.5rem 1rem; font-size:0.8rem" onclick="this.parentElement.parentElement.remove()">X</button>
+            </div>
         `;
-        container.appendChild(div);
-        siteCounter++;
+        document.getElementById('site-inputs').appendChild(div);
       }
 
-      function clearResults() {
-          allResults = [];
-          document.getElementById('stats-table').innerHTML = '';
-          document.getElementById('stats-container').classList.remove('show');
-          document.getElementById('site-inputs').innerHTML = '';
-          siteCounter = 0;
-          addSiteInput();
-      }
-
-      // 1. Handle Upload
-      function handleFileUpload(input) {
-          const file = input.files[0];
-          if (!file) return;
-
-          const reader = new FileReader();
-          reader.onload = function(e) {
-              try {
-                  const data = JSON.parse(e.target.result);
-                  // Ensure it looks like our data
-                  if (!data.domain) throw new Error("Invalid state file format");
-                  
-                  // Mark as saved state for visual distinction
-                  data.isSavedState = true; 
-                  data.uploadDate = new Date().toLocaleDateString();
-
-                  allResults.push(data);
-                  renderTable(allResults);
-                  document.getElementById('stats-container').classList.add('show');
-              } catch (err) {
-                  alert("Error loading file: " + err.message);
-              }
-          };
-          reader.readAsText(file);
-          input.value = ''; // Reset
-      }
-
-      // 2. Handle Live Analysis
-      document.getElementById('site-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('submit-btn');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loading"></span>Analyzing...';
-
-        const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
-        const sites = [];
-        
-        const inputs = document.querySelectorAll('[name^="domain-"]');
-        if(inputs.length === 0 && allResults.length === 0) {
-            alert("Please add a site or upload a state.");
-            btn.disabled = false; btn.innerHTML = originalText;
-            return;
-        }
-
-        for (let i = 0; i < inputs.length; i++) {
-            if(!inputs[i].value) continue;
-            const domain = inputs[i].value.replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
-            sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
-        }
-
-        if(sites.length > 0) {
-            try {
-                const res = await fetch('/api/stats', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sites })
-                });
-                
-                const data = await res.json();
-                // Append new live results to existing (uploaded) results
-                allResults = [...allResults, ...data.results];
-                renderTable(allResults);
-                document.getElementById('stats-container').classList.add('show');
-            } catch (err) {
-                alert('Error: ' + err.message);
-            }
-        }
-        
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      });
-
-      // 3. Download Logic
-      window.downloadState = function(index) {
-          const data = allResults[index];
-          const filename = `jira-state-${data.domain}-${new Date().toISOString().slice(0,10)}.json`;
-          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          window.URL.revokeObjectURL(url);
+      window.toggleManual = function(sel) {
+          sel.parentElement.nextElementSibling.style.display = (sel.value === 'manual') ? 'block' : 'none';
       };
 
-      function renderTable(results) {
-        const metrics = [
-          ['boardCount', '📌 Boards'],
-          ['dashboardCount', '📊 Dashboards'],
-          ['fieldCount', '🏷️ Custom Fields'],
-          ['fieldConfigurationCount', '⚙️ Field Configurations'],
-          ['fieldConfigurationSchemeCount', '🔧 Field Configuration Schemes'],
-          ['filterCount', '🔍 Filters'],
-          ['issueSecuritySchemeCount', '🔒 Issue Security Schemes'],
-          ['issueTypeCount', '🎫 Issue Types'],
-          ['issueTypeSchemeCount', '📝 Issue Type Schemes'],
-          ['issueTypeScreenSchemeCount', '📱 Issue Type Screen Schemes'],
-          ['notificationSchemeCount', '📧 Notification Schemes'],
-          ['permissionSchemeCount', '🔐 Permission Schemes'],
-          ['priorityCount', '⭐ Priorities'],
-          ['prioritySchemeCount', '🎯 Priority Schemes'],
-          ['projectCount', '📋 Projects'],
-          ['resolutionCount', '🔄 Resolutions'],
-          ['screenCount', '🖥️ Screens'],
-          ['screenSchemeCount', '🖼️ Screen Schemes'],
-          ['statusCount', '📊 Statuses'],
-          ['workflowCount', '⚙️ Workflows'],
-          ['workflowSchemeCount', '🔄 Workflow Schemes']
-        ];
+      function reset() { globalData=[]; document.getElementById('table-area').innerHTML=''; document.getElementById('site-inputs').innerHTML=''; addInput(); }
 
-        let html = '<tr><th>Metric</th>' + results.map((r, idx) => {
-            let title = r.domain;
-            if(r.isSavedState) title += `<br><span style="font-size:0.7em; opacity:0.8; font-weight:normal">📂 Saved: ${r.uploadDate}</span>`;
-            return `<th>
-                ${title}
-                <button class="save-btn" onclick="downloadState(${idx})" title="Download State JSON">⬇️</button>
-            </th>`;
-        }).join('') + '</tr>';
-        
-        metrics.forEach(([key, label]) => {
-          html += `<tr><td>${label}</td>` + 
-            results.map(r => {
-               if (r.error) return `<td style="color:#ef4444">Error</td>`;
-               return `<td><span class="metric-value">${r[key] || 0}</span></td>`;
-            }).join('') + '</tr>';
-        });
-
-        document.getElementById('stats-table').innerHTML = html;
+      function loadFile(input) {
+          const reader = new FileReader();
+          reader.onload = e => { const d = JSON.parse(e.target.result); d.isSaved=true; globalData.push(d); render(); };
+          reader.readAsText(input.files[0]); input.value='';
       }
 
-      addSiteInput();
+      async function run() {
+          const btn = document.querySelector('.btn-go');
+          btn.innerText = 'Analyzing...'; btn.disabled = true;
+          const sites = [];
+          
+          document.querySelectorAll('.site-block').forEach(div => {
+              const sel = div.querySelector('.src-select');
+              if(sel.value === 'manual') {
+                  const dom = div.querySelector('.man-dom').value;
+                  if(dom && defCreds.email) sites.push({ type:'cloud', domain: dom, email: defCreds.email, token: defCreds.token });
+                  else alert('Manual entry requires Default Creds saved in Settings.');
+              } else if (sel.value) {
+                  const [type, idx] = sel.value.split('-');
+                  if(type==='c') { const s = cloudSites[idx]; sites.push({ type:'cloud', domain:s.domain, email:s.email, token:s.token }); }
+                  else { sites.push({ type:'dc', ...dcConns[idx] }); }
+              }
+          });
+
+          if(sites.length) {
+              try {
+                  const res = await fetch('/api/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sites}) });
+                  const data = await res.json();
+                  globalData = [...globalData, ...data.results];
+                  render();
+              } catch(e) { alert(e.message); }
+          }
+          btn.innerText = '🚀 Analyze'; btn.disabled = false;
+      }
+
+      function render() {
+          const keys = [['projectCount','Projects'],['issueCount','Issues'],['workflowCount','Workflows'],['fieldCount','Fields'],['priorityCount','Priorities'],['statusCount','Statuses'],['type','Source Type']];
+          let h = '<table><thead><tr><th>Metric</th>';
+          globalData.forEach((d,i) => h+=`<th>${d.domain}${d.isSaved?' (Saved)':''}</th>`);
+          h+='</tr></thead><tbody>';
+          keys.forEach(([k,l]) => {
+              h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';
+          });
+          document.getElementById('table-area').innerHTML = h + '</tbody></table>';
+      }
     </script>
-  </body>
+</body>
 </html>
