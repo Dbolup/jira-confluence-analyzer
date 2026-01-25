@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Jira Stats</title>
-    <style>
+    <style>/* Same styles as previous */
       body { margin: 0; font-family: -apple-system, sans-serif; background: #f1f5f9; padding: 2rem; color: #1e293b; }
       .container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
       h1 { text-align: center; color: #3b82f6; margin-bottom: 2rem; }
       .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
       .nav-btn { padding: 0.8rem 1.5rem; background: #e2e8f0; color: #64748b; border-radius: 8px; text-decoration: none; font-weight: 600; }
       .active { background: #3b82f6; color: white; }
-      
       .site-block { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 10px; }
       select, input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; }
       .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color:white; }
       .btn-add { background: #10b981; } .btn-go { background: #3b82f6; } .btn-up { background: #f59e0b; } .btn-clr { background: #ef4444; }
-      
       table { width: 100%; margin-top: 2rem; border-collapse: collapse; }
       th, td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: center; }
       th { background: #3b82f6; color: white; } td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
@@ -27,10 +25,8 @@
       <div class="nav-buttons">
         <a href="/" class="nav-btn">🏠 Home</a><a href="/jira-stats" class="nav-btn active">📊 Stats</a><a href="/compare" class="nav-btn">🔄 Compare</a>
       </div>
-      
       <div id="site-inputs"></div>
       <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
-      
       <div style="display:flex; gap:1rem; margin-top:1rem">
         <button class="btn btn-add" onclick="addInput()">➕ Add Source</button>
         <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload</button>
@@ -51,42 +47,21 @@
       function addInput() {
         const div = document.createElement('div');
         div.className = 'site-block';
-        
         let opts = '<option value="">-- Select Saved Source --</option>';
         if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
         if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
-
-        div.innerHTML = `
-            <div style="display:flex; gap:10px; align-items:center">
-                <div style="flex:1">
-                    <select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select>
-                </div>
-                <div class="manual-box" style="flex:1; display:none">
-                    <input class="man-dom" placeholder="company (uses default creds)">
-                </div>
-                <button class="btn btn-clr" style="padding:0.5rem 1rem; font-size:0.8rem" onclick="this.parentElement.parentElement.remove()">X</button>
-            </div>
-        `;
+        div.innerHTML = `<div style="display:flex; gap:10px; align-items:center"><div style="flex:1"><select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select></div><div class="manual-box" style="flex:1; display:none"><input class="man-dom" placeholder="company (uses default creds)"></div><button class="btn btn-clr" style="padding:0.5rem 1rem; font-size:0.8rem" onclick="this.parentElement.parentElement.remove()">X</button></div>`;
         document.getElementById('site-inputs').appendChild(div);
       }
 
-      window.toggleManual = function(sel) {
-          sel.parentElement.nextElementSibling.style.display = (sel.value === 'manual') ? 'block' : 'none';
-      };
-
+      window.toggleManual = function(sel) { sel.parentElement.nextElementSibling.style.display = (sel.value === 'manual') ? 'block' : 'none'; };
       function reset() { globalData=[]; document.getElementById('table-area').innerHTML=''; document.getElementById('site-inputs').innerHTML=''; addInput(); }
-
-      function loadFile(input) {
-          const reader = new FileReader();
-          reader.onload = e => { const d = JSON.parse(e.target.result); d.isSaved=true; globalData.push(d); render(); };
-          reader.readAsText(input.files[0]); input.value='';
-      }
+      function loadFile(input) { const reader = new FileReader(); reader.onload = e => { const d = JSON.parse(e.target.result); d.isSaved=true; globalData.push(d); render(); }; reader.readAsText(input.files[0]); input.value=''; }
 
       async function run() {
           const btn = document.querySelector('.btn-go');
           btn.innerText = 'Analyzing...'; btn.disabled = true;
           const sites = [];
-          
           document.querySelectorAll('.site-block').forEach(div => {
               const sel = div.querySelector('.src-select');
               if(sel.value === 'manual') {
@@ -99,7 +74,6 @@
                   else { sites.push({ type:'dc', ...dcConns[idx] }); }
               }
           });
-
           if(sites.length) {
               try {
                   const res = await fetch('/api/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sites}) });
@@ -112,9 +86,19 @@
       }
 
       function render() {
-          const keys = [['projectCount','Projects'],['issueCount','Issues'],['workflowCount','Workflows'],['fieldCount','Fields'],['priorityCount','Priorities'],['statusCount','Statuses'],['type','Source Type']];
+          // ISSUE COUNT REMOVED
+          const keys = [
+              ['projectCount','Projects'],['workflowCount','Workflows'],['workflowSchemeCount','Workflow Schemes'],
+              ['fieldCount','Fields'],['fieldConfigurationSchemeCount','Field Config Schemes'],
+              ['issueTypeCount','Issue Types'],['issueTypeSchemeCount','Issue Type Schemes'],
+              ['priorityCount','Priorities'],['statusCount','Statuses'],
+              ['screenCount','Screens'],['screenSchemeCount','Screen Schemes'],['issueTypeScreenSchemeCount','Issue Type Screen Schemes'],
+              ['notificationSchemeCount','Notification Schemes'],['permissionSchemeCount','Permission Schemes'],['issueSecuritySchemeCount','Security Schemes'],
+              ['type','Source Type']
+          ];
+          
           let h = '<table><thead><tr><th>Metric</th>';
-          globalData.forEach((d,i) => h+=`<th>${d.domain}${d.isSaved?' (Saved)':''}</th>`);
+          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''}</th>`);
           h+='</tr></thead><tbody>';
           keys.forEach(([k,l]) => {
               h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';

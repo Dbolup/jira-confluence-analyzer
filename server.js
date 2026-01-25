@@ -80,7 +80,7 @@ app.post('/api/test-db', async (req, res) => {
     }
 });
 
-// 1. Jira Stats
+// 1. Jira Stats (Removed Issue Count)
 app.post('/api/stats', async (req, res, next) => {
   try {
     const { sites } = req.body;
@@ -94,36 +94,60 @@ app.post('/api/stats', async (req, res, next) => {
             const agileUrl = baseUrl.replace('/api/3', '/agile/1.0');
             const safe = (fn, ...args) => fn(...args).catch(e => ({ error: e.message }));
 
-            const [p, f, w, ws, it, its, pr, st, ns, iss] = await Promise.all([
+            // CLOUD: Uses REST API
+            const [p, f, w, ws, it, its, pr, st, ns, iss, sc, scs, itss, fc, fcs, r, fl, perm] = await Promise.all([
                 safe(jiraUtils.getProjects, { headers, baseUrl }), safe(jiraUtils.getCustomFields, { headers, baseUrl }),
                 safe(jiraUtils.getWorkflows, { headers, baseUrl }), safe(jiraUtils.getWorkflowSchemes, { headers, baseUrl }),
                 safe(jiraUtils.getIssueTypes, { headers, baseUrl }), safe(jiraUtils.getIssueTypeSchemes, { headers, baseUrl }),
                 safe(jiraUtils.getPriorities, { headers, baseUrl }), safe(jiraUtils.getStatuses, { headers, baseUrl }),
-                safe(jiraUtils.getNotificationSchemes, { headers, baseUrl }), safe(jiraUtils.getIssueSecuritySchemes, { headers, baseUrl })
+                safe(jiraUtils.getNotificationSchemes, { headers, baseUrl }), safe(jiraUtils.getIssueSecuritySchemes, { headers, baseUrl }),
+                safe(jiraUtils.getScreens, { headers, baseUrl }), safe(jiraUtils.getScreenSchemes, { headers, baseUrl }),
+                safe(jiraUtils.getIssueTypeScreenSchemes, { headers, baseUrl }), safe(jiraUtils.getFieldConfigurations, { headers, baseUrl }),
+                safe(jiraUtils.getFieldConfigurationSchemes, { headers, baseUrl }), safe(jiraUtils.getResolutions, { headers, baseUrl }),
+                safe(jiraUtils.getFilters, { headers, baseUrl }), safe(jiraUtils.getPermissionSchemes, { headers, baseUrl })
             ]);
 
             results.push({
-                domain: site.domain, type: 'Cloud',
+                domain: site.domain, type: 'Cloud', name: site.domain,
                 projectCount: p.total??p, fieldCount: f.total??f, 
                 workflowCount: w, workflowSchemeCount: ws.total??ws,
                 issueTypeCount: it, issueTypeSchemeCount: its.total??its,
-                priorityCount: pr, statusCount: st, notificationSchemeCount: ns,
-                issueSecuritySchemeCount: iss
+                priorityCount: pr, statusCount: st, 
+                notificationSchemeCount: ns, issueSecuritySchemeCount: iss,
+                screenCount: sc, screenSchemeCount: scs, issueTypeScreenSchemeCount: itss,
+                fieldConfigurationCount: fc, fieldConfigurationSchemeCount: fcs,
+                resolutionCount: r, filterCount: fl, permissionSchemeCount: perm
             });
         } else {
+            // DATA CENTER: Uses SQL
             const count = async (table) => {
-                const res = await queryDB(site, `SELECT count(*) as "cnt" FROM ${table}`);
-                return res[0]?.cnt || 0;
+                try {
+                    const res = await queryDB(site, `SELECT count(*) as "cnt" FROM ${table}`);
+                    return res[0]?.cnt || 0;
+                } catch(e) { return 0; }
             };
-            const [p, i, cf, w, it, st, r, prio] = await Promise.all([
-                count('project'), count('jiraissue'), count('customfield'), count('jiraworkflows'),
-                count('issuetype'), count('issuestatus'), count('resolution'), count('priority')
+
+            const [p, cf, w, ws, it, its, st, r, prio, ns, perm, iss, sc, scs, itss, fcs] = await Promise.all([
+                count('project'), count('customfield'), 
+                count('jiraworkflows'), count('workflowscheme'),
+                count('issuetype'), count('fieldconfigscheme'),
+                count('issuestatus'), count('resolution'), count('priority'),
+                count('notificationscheme'), count('permissionscheme'), count('issuesecurityscheme'),
+                count('fieldscreen'), count('fieldscreenscheme'), count('issuetypescreenscheme'),
+                count('fieldlayoutscheme')
             ]);
+
             results.push({
-                domain: site.name, type: 'Data Center',
-                projectCount: p, issueCount: i, fieldCount: cf,
-                workflowCount: w, issueTypeCount: it, statusCount: st,
-                resolutionCount: r, priorityCount: prio
+                domain: site.name, type: 'Data Center', name: site.name,
+                projectCount: p, fieldCount: cf, // Issue Count Removed
+                workflowCount: w, workflowSchemeCount: ws,
+                issueTypeCount: it, issueTypeSchemeCount: its,
+                statusCount: st, resolutionCount: r, priorityCount: prio,
+                notificationSchemeCount: ns, permissionSchemeCount: perm, issueSecuritySchemeCount: iss,
+                screenCount: sc, screenSchemeCount: scs, issueTypeScreenSchemeCount: itss,
+                fieldConfigurationSchemeCount: fcs,
+                fieldConfigurationCount: "N/A (DB)",
+                filterCount: await count('searchrequest')
             });
         }
       } catch (e) { results.push({ domain: site.domain || site.name, error: e.message }); }
@@ -155,7 +179,7 @@ app.post('/api/projects', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 3. Jira Deep Compare
+// 3. Jira Deep Compare (Full DC Support)
 app.post('/api/compare-projects', async (req, res, next) => {
     try {
         const { selection } = req.body;
@@ -167,6 +191,7 @@ app.post('/api/compare-projects', async (req, res, next) => {
             
             try {
                 if (src.type === 'cloud') {
+                    // --- CLOUD LOGIC ---
                     const headers = getAuthHeaders(src.email, src.token);
                     const baseUrl = getBaseUrl(src.domain);
                     let pId = item.projectId;
@@ -184,13 +209,14 @@ app.post('/api/compare-projects', async (req, res, next) => {
                         if(typeof cData.count === 'number') issueCount = cData.count;
                     } catch(e) {}
 
-                    const [perm, notif, wfScheme, itScheme, prioScheme, screenScheme] = await Promise.all([
+                    const [perm, notif, wfScheme, itScheme, prioScheme, screenScheme, fcScheme] = await Promise.all([
                         fetch(`${baseUrl}/project/${pKey}/permissionscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
                         fetch(`${baseUrl}/project/${pKey}/notificationscheme`, { headers }).then(r=>r.ok?r.json():{name:'Default'}),
                         fetch(`${baseUrl}/workflowscheme/project?projectId=${pId}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
                         fetch(`${baseUrl}/issuetypescheme/project?projectId=${pId}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
                         fetch(`${baseUrl}/priorityscheme`, { headers }).then(r=>r.ok?r.json():{values:[]}),
-                        fetch(`${baseUrl}/issuetypescreenscheme/project?projectId=${pId}`, { headers }).then(r=>r.ok?r.json():{values:[]})
+                        fetch(`${baseUrl}/issuetypescreenscheme/project?projectId=${pId}`, { headers }).then(r=>r.ok?r.json():{values:[]}),
+                        fetch(`${baseUrl}/fieldconfigurationscheme/project?projectId=${pId}`, { headers }).then(r=>r.ok?r.json():{values:[]})
                     ]);
 
                     let priorityName = "Default";
@@ -209,39 +235,68 @@ app.post('/api/compare-projects', async (req, res, next) => {
                         notificationScheme: notif.name,
                         issueTypeScheme: itScheme.values?.[0]?.issueTypeScheme?.name || "Default",
                         priorityScheme: priorityName,
+                        fieldConfiguration: fcScheme.values?.[0]?.fieldConfigurationScheme?.name || "Default",
                         screenScheme: screenScheme.values?.[0]?.issueTypeScreenScheme?.name || "Default"
                     };
                 } else {
-                    // DC Logic
-                    const [countRes, compRes, leadRes] = await Promise.all([
+                    // --- DATA CENTER LOGIC (Improved) ---
+                    
+                    // 1. Basic Stats & Lead Name
+                    const [countRes, compRes] = await Promise.all([
                         queryDB(src, `SELECT count(*) as "cnt" FROM jiraissue WHERE project = (SELECT id FROM project WHERE pkey = '${pKey}')`),
-                        queryDB(src, `SELECT count(*) as "cnt" FROM component WHERE project = (SELECT id FROM project WHERE pkey = '${pKey}')`),
-                        queryDB(src, `SELECT lead FROM project WHERE pkey = '${pKey}'`)
+                        queryDB(src, `SELECT count(*) as "cnt" FROM component WHERE project = (SELECT id FROM project WHERE pkey = '${pKey}')`)
                     ]);
 
-                    const getScheme = async (entity) => {
-                        const sql = `SELECT s.NAME FROM nodeassociation na JOIN ${entity.toLowerCase()} s ON na.SINK_NODE_ID = s.ID WHERE na.SOURCE_NODE_ENTITY = 'Project' AND na.SINK_NODE_ENTITY = '${entity}' AND na.SOURCE_NODE_ID = (SELECT id FROM project WHERE pkey = '${pKey}')`;
-                        const r = await queryDB(src, sql);
-                        return r[0]?.NAME || "Default";
+                    // Lead Name Join (Project -> AppUser -> CwdUser)
+                    let leadName = "Unknown";
+                    try {
+                        // Standard Jira 8.x schema
+                        const leadSql = `
+                            SELECT u.display_name 
+                            FROM project p
+                            LEFT JOIN app_user au ON p.lead = au.user_key
+                            LEFT JOIN cwd_user u ON au.lower_user_name = u.lower_user_name
+                            WHERE p.pkey = '${pKey}'
+                        `;
+                        const leadData = await queryDB(src, leadSql);
+                        if (leadData[0]?.display_name) leadName = leadData[0].display_name;
+                        else {
+                            // Fallback for older Jira
+                            const oldLeadSql = `SELECT lead FROM project WHERE pkey = '${pKey}'`;
+                            const oldLead = await queryDB(src, oldLeadSql);
+                            leadName = oldLead[0]?.lead || "Unknown";
+                        }
+                    } catch(e) { console.error("Lead SQL Error", e); }
+
+                    // 2. Resolve Schemes
+                    const getScheme = async (entity, table) => {
+                        try {
+                            const sql = `SELECT s.NAME FROM nodeassociation na JOIN ${table} s ON na.SINK_NODE_ID = s.ID WHERE na.SOURCE_NODE_ENTITY = 'Project' AND na.SINK_NODE_ENTITY = '${entity}' AND na.SOURCE_NODE_ID = (SELECT id FROM project WHERE pkey = '${pKey}')`;
+                            const r = await queryDB(src, sql);
+                            return r[0]?.NAME || "Default";
+                        } catch(e) { return "Default"; }
                     };
 
-                    const [wfName, permName, notifName] = await Promise.all([
-                        getScheme('WorkflowScheme'),
-                        getScheme('PermissionScheme'),
-                        getScheme('NotificationScheme')
+                    const [wfName, permName, notifName, fcName, screenName] = await Promise.all([
+                        getScheme('WorkflowScheme', 'workflowscheme'),
+                        getScheme('PermissionScheme', 'permissionscheme'),
+                        getScheme('NotificationScheme', 'notificationscheme'),
+                        getScheme('FieldLayoutScheme', 'fieldlayoutscheme'),
+                        getScheme('IssueTypeScreenScheme', 'issuetypescreenscheme')
                     ]);
 
                     return {
                         domain: src.name, source: src.name, name: pKey, key: pKey, type: 'Data Center',
-                        lead: leadRes[0]?.lead || "Unknown",
+                        lead: leadName,
                         issueCount: countRes[0]?.cnt || 0,
                         componentCount: compRes[0]?.cnt || 0,
                         workflowScheme: wfName,
                         permissionScheme: permName,
                         notificationScheme: notifName,
-                        issueTypeScheme: "N/A (Complex Mapping)",
-                        priorityScheme: "N/A (Complex Mapping)",
-                        screenScheme: "N/A (Complex Mapping)"
+                        fieldConfiguration: fcName,
+                        screenScheme: screenName,
+                        issueTypeScheme: "N/A (DB)", // Too complex for single SQL
+                        priorityScheme: "N/A (DB)"
                     };
                 }
             } catch (e) { return { domain: src.domain||src.name, source: src.domain||src.name, key: pKey, error: e.message }; }
@@ -260,14 +315,14 @@ app.post('/api/confluence/stats', async (req, res, next) => {
           if (site.type === 'cloud') {
               const headers = getAuthHeaders(site.email, site.token);
               const baseUrl = getBaseUrl(site.domain, 'confluence');
-              results.push({ domain: site.domain, type: 'Cloud', ...(await confluenceUtils.getSpaces({ headers, baseUrl })) });
+              results.push({ domain: site.domain, type: 'Cloud', name: site.domain, ...(await confluenceUtils.getSpaces({ headers, baseUrl })) });
           } else {
               const count = async (where='') => {
                   const res = await queryDB(site, `SELECT count(*) as "cnt" FROM spaces ${where}`);
                   return res[0]?.cnt || 0;
               };
               results.push({
-                  domain: site.name, type: 'Data Center',
+                  domain: site.name, type: 'Data Center', name: site.name,
                   total: await count("WHERE spacestatus = 'CURRENT'"),
                   global: await count("WHERE spacetype = 'global' AND spacestatus = 'CURRENT'"),
                   personal: await count("WHERE spacetype = 'personal' AND spacestatus = 'CURRENT'"),
@@ -349,13 +404,12 @@ app.post('/api/confluence/compare-spaces', async (req, res, next) => {
                     const res = await queryDB(src, sql);
                     return res[0]?.cnt || 0;
                 };
-                
                 const [p, b, a] = await Promise.all([ count('PAGE'), count('BLOGPOST'), count('ATTACHMENT') ]);
 
                 results.push({
                     domain: src.name, source: src.name, spaceName: item.spaceName, spaceKey: key, type: 'Data Center',
                     pages: p, blogposts: b, attachments: a,
-                    databases: null, whiteboards: null, calendars: null, spaceCalendars: null, smartlinks: null, folders: null
+                    databases: null, whiteboards: null, calendars: null, spaceCalendars: null, smartlinks: null, folders: null, owner: "N/A (DB)"
                 });
             }
         } catch (e) { results.push({ domain: src.domain||src.name, error: e.message }); }

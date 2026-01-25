@@ -170,7 +170,11 @@
                 ];
 
                 let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
-                data.results.forEach(r => html += `<th>${r.source.domain||r.source.name}<br><span style="font-size:0.8em; opacity:0.8">${r.spaceName} (${r.type})</span></th>`);
+                data.results.forEach(r => {
+                    // FIX: Reliable Header Name (Handles string or object source)
+                    const headerName = r.domain || r.source.domain || r.source.name || r.source || "Unknown";
+                    html += `<th>${headerName}<br><span style="font-size:0.8em; opacity:0.8">${r.spaceName} (${r.type})</span></th>`;
+                });
                 html += '</tr></thead><tbody>';
 
                 metrics.forEach(([key, label]) => {
@@ -178,7 +182,7 @@
                     data.results.map(r => {
                         if(r.error) return `<td style="color:red">Error</td>`;
                         
-                        // Handle DC fields that return null
+                        // Handle DC fields that return null (Databases, Whiteboards etc)
                         if(r[key] === null) return `<td style="color:#94a3b8; font-style:italic">N/A</td>`;
                         
                         return `<td><span class="metric-value">${r[key]||0}</span></td>`;
