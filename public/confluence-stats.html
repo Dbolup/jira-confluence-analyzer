@@ -15,12 +15,20 @@
       button { padding: 1rem 2rem; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 1rem; }
       .btn-add { background: #10b981; }
       .btn-go { background: #667eea; width: 100%; margin-top: 1rem; }
-      .btn-pdf { background: #ef4444; float: right; margin-bottom: 1rem; }
+      .btn-upload { background: #f59e0b; width: 100%; margin-top: 1rem; }
+      .btn-clear { background: #ef4444; float: left; margin-bottom: 1rem; }
+      .btn-pdf { background: #475569; float: right; margin-bottom: 1rem; }
       
       table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 12px; overflow: hidden; }
       th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
       th { background: #667eea; color: white; }
       td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
+      
+      .save-btn {
+        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); 
+        padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.7rem; margin-left: 8px;
+      }
+      .save-btn:hover { background: rgba(255,255,255,0.4); }
     </style>
   </head>
   <body>
@@ -33,17 +41,27 @@
       </div>
 
       <div id="inputs"></div>
-      <button class="btn-add" onclick="addSite()">➕ Add Site</button>
+      
+      <input type="file" id="state-upload" accept=".json" style="display:none" onchange="handleFileUpload(this)">
+
+      <div style="display:flex; gap:1rem; margin-top:1rem;">
+          <button class="btn-add" style="flex:1" onclick="addSite()">➕ Add Site</button>
+          <button class="btn-upload" style="flex:1; margin-top:0" onclick="document.getElementById('state-upload').click()">📂 Upload State</button>
+      </div>
+      
       <button class="btn-go" onclick="analyze()">Analyze</button>
 
       <div id="results" style="display:none; margin-top:2rem">
+        <button class="btn-clear" onclick="clearResults()">🗑️ Clear Results</button>
         <button class="btn-pdf" onclick="window.print()">📄 Save as PDF</button>
+        <div style="clear:both"></div>
         <table id="table"></table>
       </div>
     </div>
 
     <script>
       let count = 0;
+      let allResults = [];
       addSite();
 
       function addSite() {
@@ -55,6 +73,50 @@
         count++;
       }
 
+      function clearResults() {
+          allResults = [];
+          document.getElementById('results').style.display = 'none';
+          document.getElementById('table').innerHTML = '';
+          document.getElementById('inputs').innerHTML = '';
+          addSite();
+      }
+
+      function handleFileUpload(input) {
+          const file = input.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+              try {
+                  const data = JSON.parse(e.target.result);
+                  if (!data.domain) throw new Error("Invalid state file");
+                  
+                  data.isSavedState = true;
+                  data.uploadDate = new Date().toLocaleDateString();
+
+                  allResults.push(data);
+                  render(allResults);
+                  document.getElementById('results').style.display = 'block';
+              } catch (err) {
+                  alert("Error: " + err.message);
+              }
+          };
+          reader.readAsText(file);
+          input.value = '';
+      }
+
+      window.downloadState = function(index) {
+          const data = allResults[index];
+          const filename = `confluence-state-${data.domain}-${new Date().toISOString().slice(0,10)}.json`;
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+      };
+
       async function analyze() {
         const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const inputs = document.querySelectorAll('.site-in');
@@ -64,20 +126,28 @@
             if(inp.value) sites.push({ domain: inp.value, email: creds.email, token: creds.token });
         });
 
+        if(sites.length === 0 && allResults.length === 0) return alert("Please add a site or upload state.");
+
         const btn = document.querySelector('.btn-go');
+        const oldText = btn.innerText;
         btn.innerText = 'Loading...';
+        btn.disabled = true;
         
         try {
-            const res = await fetch('/api/confluence/stats', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ sites })
-            });
-            const data = await res.json();
-            render(data.results);
+            if(sites.length > 0) {
+                const res = await fetch('/api/confluence/stats', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ sites })
+                });
+                const data = await res.json();
+                allResults = [...allResults, ...data.results];
+            }
+            render(allResults);
             document.getElementById('results').style.display = 'block';
         } catch(e) { alert(e); }
-        btn.innerText = 'Analyze';
+        btn.innerText = oldText;
+        btn.disabled = false;
       }
 
       function render(data) {
@@ -89,7 +159,12 @@
             ['personal', '👤 Personal Spaces']
         ];
         
-        let html = '<thead><tr><th>Metric</th>' + data.map(d => `<th>${d.domain}</th>`).join('') + '</tr></thead><tbody>';
+        let html = '<thead><tr><th>Metric</th>' + data.map((d, idx) => {
+             let title = d.domain;
+             if(d.isSavedState) title += `<br><span style="font-size:0.7em; opacity:0.8; font-weight:normal">📂 Saved: ${d.uploadDate}</span>`;
+             return `<th>${title} <button class="save-btn" onclick="downloadState(${idx})">⬇️</button></th>`;
+        }).join('') + '</tr></thead><tbody>';
+
         metrics.forEach(([key, label]) => {
             html += `<tr><td>${label}</td>` + data.map(d => `<td>${d.error ? '❌' : (d[key] || 0)}</td>`).join('') + '</tr>';
         });

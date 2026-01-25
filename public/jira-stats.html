@@ -27,14 +27,9 @@
       }
       @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
       h1 {
-        font-weight: 700;
-        font-size: 2.5rem;
-        text-align: center;
-        margin-bottom: 1rem;
+        font-weight: 700; font-size: 2.5rem; text-align: center; margin-bottom: 1rem;
         background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        position: relative;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       }
       .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
       .nav-btn {
@@ -57,7 +52,9 @@
       .button-group { display: flex; gap: 1rem; margin-top: 2rem; }
       button { padding: 1rem 2rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; color: white; flex: 1; transition: transform 0.2s; }
       .btn-add { background: linear-gradient(135deg, #10b981, #059669); }
+      .btn-upload { background: #f59e0b; color: white; }
       .btn-submit { background: linear-gradient(135deg, #667eea, #764ba2); flex: 2; }
+      .btn-clear { background: #ef4444; flex: 0.5; }
       
       .stats-container { margin-top: 3rem; display: none; }
       .stats-container.show { display: block; animation: slideUp 0.5s ease; }
@@ -67,8 +64,12 @@
       th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
       td:first-child { text-align: left; font-weight: 600; background: #f8fafc; color: #374151; }
       .metric-value { font-weight: 600; color: #667eea; }
-      .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-right: 10px; }
-      @keyframes spin { to { transform: rotate(360deg); } }
+      
+      .save-btn {
+        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); 
+        padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.7rem; margin-left: 8px;
+      }
+      .save-btn:hover { background: rgba(255,255,255,0.4); }
     </style>
   </head>
   <body>
@@ -84,9 +85,14 @@
 
       <form id="site-form">
         <div id="site-inputs"></div>
+        
+        <input type="file" id="state-upload" accept=".json" style="display:none" onchange="handleFileUpload(this)">
+
         <div class="button-group">
           <button type="button" class="btn-add" onclick="addSiteInput()">➕ Add Site</button>
+          <button type="button" class="btn-upload" onclick="document.getElementById('state-upload').click()">📂 Upload State</button>
           <button type="submit" class="btn-submit" id="submit-btn">📊 Get Stats</button>
+          <button type="button" class="btn-clear" onclick="clearResults()">🗑️ Clear</button>
         </div>
       </form>
 
@@ -97,6 +103,7 @@
 
     <script>
       let siteCounter = 0;
+      let allResults = []; // Stores both Live and Uploaded results
 
       function addSiteInput() {
         const savedCreds = localStorage.getItem('atlassianGlobalCreds');
@@ -121,6 +128,43 @@
         siteCounter++;
       }
 
+      function clearResults() {
+          allResults = [];
+          document.getElementById('stats-table').innerHTML = '';
+          document.getElementById('stats-container').classList.remove('show');
+          document.getElementById('site-inputs').innerHTML = '';
+          siteCounter = 0;
+          addSiteInput();
+      }
+
+      // 1. Handle Upload
+      function handleFileUpload(input) {
+          const file = input.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+              try {
+                  const data = JSON.parse(e.target.result);
+                  // Ensure it looks like our data
+                  if (!data.domain) throw new Error("Invalid state file format");
+                  
+                  // Mark as saved state for visual distinction
+                  data.isSavedState = true; 
+                  data.uploadDate = new Date().toLocaleDateString();
+
+                  allResults.push(data);
+                  renderTable(allResults);
+                  document.getElementById('stats-container').classList.add('show');
+              } catch (err) {
+                  alert("Error loading file: " + err.message);
+              }
+          };
+          reader.readAsText(file);
+          input.value = ''; // Reset
+      }
+
+      // 2. Handle Live Analysis
       document.getElementById('site-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
@@ -131,32 +175,55 @@
         const savedCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
         const sites = [];
         
-        for (let i = 0; i < siteCounter; i++) {
-          const domain = document.querySelector(`[name="domain-${i}"]`).value
-            .replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
-          sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
+        const inputs = document.querySelectorAll('[name^="domain-"]');
+        if(inputs.length === 0 && allResults.length === 0) {
+            alert("Please add a site or upload a state.");
+            btn.disabled = false; btn.innerHTML = originalText;
+            return;
         }
 
-        try {
-          const res = await fetch('/api/stats', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sites })
-          });
-          
-          const data = await res.json();
-          renderTable(data.results);
-          document.getElementById('stats-container').classList.add('show');
-        } catch (err) {
-          alert('Error: ' + err.message);
-        } finally {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
+        for (let i = 0; i < inputs.length; i++) {
+            if(!inputs[i].value) continue;
+            const domain = inputs[i].value.replace(/^https?:\/\//, '').replace(/\/$/, '').replace('.atlassian.net', '');
+            sites.push({ domain, email: savedCreds.email, token: savedCreds.token });
         }
+
+        if(sites.length > 0) {
+            try {
+                const res = await fetch('/api/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sites })
+                });
+                
+                const data = await res.json();
+                // Append new live results to existing (uploaded) results
+                allResults = [...allResults, ...data.results];
+                renderTable(allResults);
+                document.getElementById('stats-container').classList.add('show');
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       });
 
+      // 3. Download Logic
+      window.downloadState = function(index) {
+          const data = allResults[index];
+          const filename = `jira-state-${data.domain}-${new Date().toISOString().slice(0,10)}.json`;
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+      };
+
       function renderTable(results) {
-        // Expanded to include all 21 items you asked for
         const metrics = [
           ['boardCount', '📌 Boards'],
           ['dashboardCount', '📊 Dashboards'],
@@ -181,7 +248,14 @@
           ['workflowSchemeCount', '🔄 Workflow Schemes']
         ];
 
-        let html = '<tr><th>Metric</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
+        let html = '<tr><th>Metric</th>' + results.map((r, idx) => {
+            let title = r.domain;
+            if(r.isSavedState) title += `<br><span style="font-size:0.7em; opacity:0.8; font-weight:normal">📂 Saved: ${r.uploadDate}</span>`;
+            return `<th>
+                ${title}
+                <button class="save-btn" onclick="downloadState(${idx})" title="Download State JSON">⬇️</button>
+            </th>`;
+        }).join('') + '</tr>';
         
         metrics.forEach(([key, label]) => {
           html += `<tr><td>${label}</td>` + 

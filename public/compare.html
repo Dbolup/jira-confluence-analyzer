@@ -1,181 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
     <title>Jira Project Comparison</title>
     <style>
-      /* Same CSS as before */
-      body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
-      .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-      h1 { text-align: center; color: #4c1d95; margin-bottom: 2rem; font-weight:800; }
-      .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
-      .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 12px; background: #f1f5f9; transition: 0.2s; }
-      .nav a:hover { background: #e2e8f0; transform: translateY(-2px); }
-      .active-link { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: white !important; }
-      .step { display: none; }
-      .step.active { display: block; animation: fadeIn 0.4s; }
-      @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
-      
-      .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
-      button { padding: 1rem 2rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
-      button:hover { transform: translateY(-2px); opacity: 0.9; }
-      .btn-go { background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; margin-top: 1rem; }
-      .btn-back { background: #64748b; margin-top: 1rem; }
-      
-      table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 16px; overflow: hidden; }
-      th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #f1f5f9; vertical-align:top; }
-      th { background: #667eea; color: white; }
-      td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
-      .metric-value { color: #667eea; font-weight: 500; }
+        body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        h1 { color: #1e293b; text-align: center; margin-bottom: 2rem; }
+        
+        /* Navigation */
+        .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+        .nav a { padding: 0.8rem 1.5rem; background: #f1f5f9; color: #64748b; text-decoration: none; border-radius: 12px; font-weight: 600; }
+        .nav a.active { background: #667eea; color: white; }
+
+        /* Input Rows */
+        .row-card { background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-end; }
+        .col { flex: 1; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 5px; }
+        select { width: 100%; padding: 0.8rem; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1rem; }
+        
+        /* Buttons */
+        .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-add { background: #10b981; }
+        .btn-run { background: #6366f1; }
+        .btn-del { background: #ef4444; padding: 0.8rem; }
+        
+        /* The Deep Table */
+        .table-wrapper { overflow-x: auto; margin-top: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        th { background: #667eea; color: white; text-align: center; min-width: 200px; }
+        td:first-child { text-align: left; background: #f8fafc; font-weight: 600; color: #334155; position: sticky; left: 0; z-index: 10; border-right: 2px solid #e2e8f0; }
+        .metric-value { color: #4f46e5; font-weight: 500; }
+
+        /* View More Link */
+        .more-link {
+            color: #667eea;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-block;
+            background: #eff6ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #dbeafe;
+        }
+        .more-link:hover { 
+            background: #667eea; 
+            color: white; 
+            border-color: #667eea;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <h1>Jira Project Comparison</h1>
-      <div class="nav">
-        <a href="/">🏠 Dashboard</a>
-        <a href="/jira-stats">📊 Stats</a>
-        <a href="/compare" class="active-link">🔄 Compare</a>
-        <a href="/insights">🔍 Insights</a>
-      </div>
-
-      <div id="step1" class="step active">
-        <div id="siteInputs"></div>
-        <button onclick="addInput()" style="background:#10b981; margin-top:1rem;">➕ Add Site</button>
-        <button class="btn-go" onclick="loadProjects()">📂 Load Projects</button>
-      </div>
-
-      <div id="step2" class="step">
-        <h2>Select Projects</h2>
-        <div id="selectors" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem;"></div>
-        <div style="display:flex; gap:1rem">
-            <button class="btn-back" onclick="changeStep(1)" style="flex:1">⬅ Back</button>
-            <button class="btn-go" onclick="compare()" style="flex:2">🔍 Compare Selected</button>
+        <h1>Jira Project Comparison</h1>
+        <div class="nav">
+            <a href="/">🏠 Dashboard</a>
+            <a href="/credentials">🔑 Credentials</a>
+            <a href="/jira-stats">📊 Stats</a>
+            <a href="#" class="active">🔄 Compare</a>
         </div>
-      </div>
 
-      <div id="step3" class="step">
-        <button onclick="changeStep(2)" class="btn-back" style="float:left">⬅ Edit Selection</button>
-        <button onclick="window.print()" style="background:#ef4444; float:right">📄 PDF</button>
-        <div style="clear:both"></div>
-        <div id="results"></div>
-      </div>
+        <div id="rows-container"></div>
+        
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+            <button class="btn btn-add" onclick="addRow()">➕ Add Project</button>
+            <button class="btn btn-run" onclick="runCompare()">🔍 Run Comparison</button>
+            <button class="btn" style="background:#64748b; margin-left:auto" onclick="window.print()">📄 Print / PDF</button>
+        </div>
+
+        <div id="results-area"></div>
     </div>
 
     <script>
-      let loadedData = [];
-      const saved = JSON.parse(sessionStorage.getItem('jiraCompareSites') || '[]');
-      if(saved.length > 0) saved.forEach(url => addInput(url));
-      else addInput();
+        const cloudCreds = JSON.parse(localStorage.getItem('atlassianGlobalCreds') || '{}');
+        const dcCreds = JSON.parse(localStorage.getItem('dcConnections') || '[]');
 
-      function addInput(val = '') {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `<label>Site URL</label><input class="domain-in" value="${val}" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:2px solid #e2e8f0; border-radius:8px;">`;
-        document.getElementById('siteInputs').appendChild(div);
-      }
+        addRow(); addRow();
 
-      function changeStep(stepNum) {
-        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.getElementById('step' + stepNum).classList.add('active');
-      }
+        function addRow() {
+            const div = document.createElement('div');
+            div.className = 'row-card';
+            
+            let opts = '<option value="">-- Select Source --</option>';
+            if(cloudCreds.email) opts += `<option value="cloud">☁️ Cloud (${cloudCreds.email})</option>`;
+            dcCreds.forEach((dc, i) => opts += `<option value="dc-${i}">🏢 DC: ${dc.name}</option>`);
 
-      async function loadProjects() {
-        const inputs = document.querySelectorAll('.domain-in');
-        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
-        if(!creds) return alert('Please set credentials first');
+            div.innerHTML = `
+                <div class="col" style="flex:0.8">
+                    <label>Source</label>
+                    <select onchange="loadProjects(this)">${opts}</select>
+                </div>
+                <div class="col" style="flex:1.5">
+                    <label>Project</label>
+                    <select class="project-select" disabled><option>Select source first...</option></select>
+                </div>
+                <button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>
+            `;
+            document.getElementById('rows-container').appendChild(div);
+        }
 
-        const sites = [];
-        const siteUrls = [];
-        inputs.forEach(inp => {
-            if(inp.value) {
-                sites.push({ domain: inp.value, email: creds.email, token: creds.token });
-                siteUrls.push(inp.value);
+        async function loadProjects(srcSelect) {
+            const val = srcSelect.value;
+            const projSelect = srcSelect.parentElement.nextElementSibling.querySelector('select');
+            
+            if(!val) { projSelect.disabled=true; return; }
+
+            let config = {};
+            if(val === 'cloud') {
+                const domain = prompt("Enter Cloud Domain (e.g. site.atlassian.net):");
+                if(!domain) return srcSelect.value = "";
+                config = { type: 'cloud', email: cloudCreds.email, token: cloudCreds.token, domain };
+            } else {
+                config = { type: 'dc', ...dcCreds[val.split('-')[1]] };
             }
-        });
-        sessionStorage.setItem('jiraCompareSites', JSON.stringify(siteUrls));
 
-        if(sites.length === 0) return alert('Enter a site');
-        
-        const btn = document.querySelector('#step1 .btn-go');
-        btn.innerText = 'Loading...'; btn.disabled = true;
+            projSelect.innerHTML = '<option>Loading...</option>';
+            
+            try {
+                const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ sources: [config] })
+                });
+                const data = await res.json();
+                
+                if(data.results[0].error) throw new Error(data.results[0].error);
 
-        try {
-            const res = await fetch('/api/projects', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ sites })
-            });
-            const data = await res.json();
-            loadedData = data;
-            
-            const container = document.getElementById('selectors');
-            container.innerHTML = '';
-            
-            data.results.forEach((s, idx) => {
-                let html = `<div class="card"><h3>${s.domain}</h3><div style="max-height:300px; overflow-y:auto">`;
-                if(s.error) html += `<p style="color:red">${s.error}</p>`;
-                else {
-                    s.projects.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
-                        html += `<div><input type="checkbox" id="${idx}-${p.key}" value="${p.key}"><label for="${idx}-${p.key}"> ${p.name}</label></div>`;
+                let html = '<option value="">-- Select Project --</option>';
+                data.results[0].projects.forEach(p => {
+                    html += `<option value="${p.key}" data-source='${JSON.stringify(config)}' data-id="${p.id}">${p.name} (${p.key})</option>`;
+                });
+                projSelect.innerHTML = html;
+                projSelect.disabled = false;
+            } catch(e) { 
+                projSelect.innerHTML = `<option>Error: ${e.message}</option>`; 
+            }
+        }
+
+        async function runCompare() {
+            const selection = [];
+            document.querySelectorAll('.project-select').forEach(s => {
+                if(s.value && !s.disabled) {
+                    const opt = s.options[s.selectedIndex];
+                    selection.push({
+                        source: JSON.parse(opt.getAttribute('data-source')),
+                        projectKey: s.value,
+                        projectId: opt.getAttribute('data-id')
                     });
                 }
-                container.innerHTML += html + '</div></div>';
             });
 
-            changeStep(2);
-        } catch(e) { alert(e); } finally { btn.innerText = '📂 Load Projects'; btn.disabled = false; }
-      }
+            if(!selection.length) return alert("Please select at least one project");
 
-      async function compare() {
-        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
-        const selected = [];
-        
-        loadedData.results.forEach((site, idx) => {
-            if(!site.projects) return;
-            site.projects.forEach(p => {
-                const cb = document.getElementById(`${idx}-${p.key}`);
-                if(cb && cb.checked) {
-                    selected.push({ domain: site.domain, site: { email: creds.email, token: creds.token }, project: p });
-                }
-            });
-        });
+            const area = document.getElementById('results-area');
+            area.innerHTML = '<h3 style="text-align:center; color:#667eea">🚀 Crunching deep data...</h3>';
 
-        if(selected.length === 0) return alert('Select a project');
-
-        const btn = document.querySelector('#step2 .btn-go');
-        btn.innerText = 'Fetching Deep Data...'; btn.disabled = true;
-
-        try {
             const res = await fetch('/api/compare-projects', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ projects: selected })
+                body: JSON.stringify({ selection })
             });
             const data = await res.json();
-            
-            let html = '<table><thead><tr><th>Metric</th>';
-            data.results.forEach(r => html += `<th>${r.domain}<br><small>${r.key}</small></th>`);
-            html += '</tr></thead><tbody>';
-            
+
+            // === UPDATED METRICS ===
+            // Added 'componentCount' here
             const metrics = [
-                ['name','📝 Name'], ['lead','👤 Lead'], ['issueCount','🎫 Issues'],
-                ['workflowScheme','🔄 Workflow Scheme'], ['issueTypeScheme','📋 Issue Type Scheme'],
-                ['priorityScheme','🎯 Priority Scheme'], ['fieldConfiguration','⚙️ Field Config'],
-                // Removed 'screenScheme' here as requested
-                ['issueTypeScreenScheme','📱 Issue Type Screen Scheme'], 
-                ['permissionScheme','🔐 Permissions'], ['notificationScheme','📧 Notifications'], 
-                ['statuses','📊 Statuses']
+                ['name', '📝 Project Name'],
+                ['lead', '👤 Project Lead'],
+                ['issueCount', '🎫 Issue Count'],
+                ['componentCount', '🧩 Components'], 
+                ['workflowScheme', '🔄 Workflow Scheme'],
+                ['issueTypeScheme', '📋 Issue Type Scheme'],
+                ['priorityScheme', '🎯 Priority Scheme'],
+                ['fieldConfiguration', '⚙️ Field Config'],
+                ['permissionScheme', '🔐 Permissions'],
+                ['notificationScheme', '📧 Notifications'],
+                ['issueTypeScreenScheme', '📱 Issue Type Screen Scheme'],
+                ['statuses', '📊 Statuses']
             ];
 
-            metrics.forEach(([k, l]) => {
-                html += `<tr><td>${l}</td>` + data.results.map(r => `<td>${r[k]||'-'}</td>`).join('') + '</tr>';
+            let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
+            data.results.forEach(r => html += `<th>${r.source}<br><span style="font-size:0.8em; opacity:0.8">${r.key} (${r.type})</span></th>`);
+            html += '</tr></thead><tbody>';
+
+            metrics.forEach(([key, label]) => {
+                html += `<tr><td>${label}</td>` + 
+                data.results.map(r => {
+                    if(r.error) return `<td style="color:red">Error</td>`;
+                    let val = r[key] || '-';
+                    
+                    if(key === 'statuses' && val.length > 60) {
+                        const uid = 's' + Math.random().toString(36).substr(2,9);
+                        const short = val.substring(0, 60);
+                        return `<td>
+                            <span id="short-${uid}">${short}...</span>
+                            <span id="full-${uid}" style="display:none">${val}</span>
+                            <br>
+                            <div onclick="toggleText('${uid}')" class="more-link" id="btn-${uid}">View More</div>
+                        </td>`;
+                    }
+                    return `<td><span class="metric-value">${val}</span></td>`;
+                }).join('') + '</tr>';
             });
-            
-            document.getElementById('results').innerHTML = html + '</tbody></table>';
-            changeStep(3);
-        } catch(e) { alert(e); } finally { btn.innerText = '🔍 Compare Selected'; btn.disabled = false; }
-      }
+
+            area.innerHTML = html + '</tbody></table></div>';
+        }
+
+        function toggleText(id) {
+            const shortSpan = document.getElementById('short-' + id);
+            const fullSpan = document.getElementById('full-' + id);
+            const btn = document.getElementById('btn-' + id);
+
+            if(fullSpan.style.display === 'none') {
+                fullSpan.style.display = 'inline';
+                shortSpan.style.display = 'none';
+                btn.innerText = 'Show Less';
+            } else {
+                fullSpan.style.display = 'none';
+                shortSpan.style.display = 'inline';
+                btn.innerText = 'View More';
+            }
+        }
     </script>
-  </body>
+</body>
 </html>
