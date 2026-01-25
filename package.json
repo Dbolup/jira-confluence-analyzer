@@ -1,6 +1,6 @@
 {
   "name": "jira-analyzer",
-  "version": "2.2.0",
+  "version": "2.5.0",
   "type": "module",
   "scripts": {
     "start": "node server.js"

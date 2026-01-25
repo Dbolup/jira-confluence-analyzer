@@ -2,24 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jira Insights</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
     <style>
       body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; padding: 2rem; }
       .container { max-width: 1200px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); padding: 3rem; border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); }
       h1 { text-align: center; color: #1e293b; margin-bottom: 2rem; font-weight:800; }
-      
       .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
       .nav a { text-decoration: none; color: #64748b; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 12px; background: #f1f5f9; transition: 0.2s; }
       .nav a:hover { background: #e2e8f0; transform: translateY(-2px); }
       .active-link { background: linear-gradient(135deg, #667eea, #764ba2) !important; color: white !important; }
-      
       .card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
       button { padding: 1rem 2rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; color: white; transition: 0.2s; }
       .btn-add { background: linear-gradient(135deg, #10b981, #059669); margin-top:1rem; }
       .btn-go { background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; margin-top: 1rem; }
       .btn-pdf { background: #ef4444; float: right; margin-bottom: 1rem; }
-
       table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: white; border-radius: 16px; overflow: hidden; }
       th, td { padding: 1.2rem; text-align: center; border-bottom: 1px solid #f1f5f9; }
       th { background: #667eea; color: white; }
@@ -35,92 +32,36 @@
   <body>
     <div class="container">
       <h1>Jira Detailed Insights</h1>
-      <div class="nav">
-        <a href="/">🏠 Dashboard</a>
-        <a href="/jira-stats">📊 Stats</a>
-        <a href="/compare">🔄 Compare</a>
-        <a href="/insights" class="active-link">🔍 Insights</a>
-      </div>
-
-      <div id="step1" class="step active">
-        <div id="siteInputs"></div>
-        <button class="btn-add" onclick="addSiteInput()">➕ Add Site</button>
-        <button class="btn-go" onclick="runAnalysis()">🚀 Run Analysis</button>
-      </div>
-
-      <div id="step2" class="step">
-        <button onclick="changeStep(1)" style="background:#64748b; float:left">⬅ Edit Selection</button>
-        <button class="btn-pdf" onclick="window.print()">📄 Save PDF</button>
-        <div style="clear:both"></div>
-        <div id="stats-container">
-            <table id="stats-table"></table>
-        </div>
-      </div>
+      <div class="nav"><a href="/">🏠 Dashboard</a><a href="/jira-stats">📊 Stats</a><a href="/compare">🔄 Compare</a><a href="/insights" class="active-link">🔍 Insights</a></div>
+      <div id="step1" class="step active"><div id="siteInputs"></div><button class="btn-add" onclick="addSiteInput()">➕ Add Site</button><button class="btn-go" onclick="runAnalysis()">🚀 Run Analysis</button></div>
+      <div id="step2" class="step"><button onclick="changeStep(1)" style="background:#64748b; float:left">⬅ Edit Selection</button><button class="btn-pdf" onclick="window.print()">📄 Save PDF</button><div style="clear:both"></div><div id="stats-container"><table id="stats-table"></table></div></div>
     </div>
-
     <script>
-      // Load previous inputs
       const saved = JSON.parse(sessionStorage.getItem('jiraInsightSites') || '[]');
-      if(saved.length > 0) saved.forEach(url => addSiteInput(url));
-      else addSiteInput();
-
-      function addSiteInput(val = '') {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `<label style="font-weight:600; color:#475569">🌐 Site URL</label><input class="domain-in" value="${val}" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:2px solid #e2e8f0; border-radius:8px;">`;
-        document.getElementById('siteInputs').appendChild(div);
-      }
-
-      function changeStep(n) {
-        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.getElementById('step'+n).classList.add('active');
-      }
-
+      if(saved.length > 0) saved.forEach(url => addSiteInput(url)); else addSiteInput();
+      function addSiteInput(val = '') { const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<label style="font-weight:600; color:#475569">🌐 Site URL</label><input class="domain-in" value="${val}" placeholder="site.atlassian.net" style="width:100%; padding:0.8rem; margin-top:5px; border:2px solid #e2e8f0; border-radius:8px;">`; document.getElementById('siteInputs').appendChild(div); }
+      function changeStep(n) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById('step'+n).classList.add('active'); }
       async function runAnalysis() {
         const inputs = document.querySelectorAll('.domain-in');
-        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds'));
+        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds')); // Using legacy global creds for simple insights if needed, or update to use new unified storage
         if(!creds) return alert("Please set credentials first");
-        
-        const sites = [];
-        const siteUrls = [];
-        inputs.forEach(inp => { if(inp.value) { sites.push({ domain: inp.value, email: creds.email, token: creds.token }); siteUrls.push(inp.value); }});
+        const sites = []; const siteUrls = [];
+        inputs.forEach(inp => { if(inp.value) { sites.push({ domain: inp.value, email: creds.email, token: creds.token, type: 'cloud' }); siteUrls.push(inp.value); }});
         sessionStorage.setItem('jiraInsightSites', JSON.stringify(siteUrls));
-
         if(sites.length === 0) return alert('Add a site');
-
-        const btn = document.querySelector('.btn-go');
-        const old = btn.innerText;
-        btn.innerText = 'Analyzing...'; btn.disabled = true;
-
+        const btn = document.querySelector('.btn-go'); const old = btn.innerText; btn.innerText = 'Analyzing...'; btn.disabled = true;
         try {
           const res = await fetch('/api/stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sites }) });
-          const data = await res.json();
-          renderTable(data.results);
-          changeStep(2);
-        } catch(e) { alert(e.message); } 
-        finally { btn.innerText = old; btn.disabled = false; }
+          const data = await res.json(); renderTable(data.results); changeStep(2);
+        } catch(e) { alert(e.message); } finally { btn.innerText = old; btn.disabled = false; }
       }
-
       function renderTable(results) {
-        const metrics = [
-          { section: 'Projects', items: [['projectCount', 'Total Projects'], ['projectsActive', 'Active'], ['projectsArchived', 'Archived']] },
-          { section: 'Schemes', items: [['permissionSchemeCount', 'Permission Schemes'], ['workflowSchemeCount', 'Workflow Schemes'], ['issueTypeSchemeCount', 'Issue Type Schemes']] },
-          { section: 'Optimization', items: [['fieldsDuplicated', 'Duplicate Fields'], ['workflowSchemesInactive', 'Inactive Workflows'], ['issueTypeSchemesInactive', 'Inactive Issue Schemes']] }
-        ];
-
+        const metrics = [{ section: 'Projects', items: [['projectCount', 'Total Projects'], ['projectsActive', 'Active'], ['projectsArchived', 'Archived']] }, { section: 'Schemes', items: [['permissionSchemeCount', 'Permission Schemes'], ['workflowSchemeCount', 'Workflow Schemes'], ['issueTypeSchemeCount', 'Issue Type Schemes']] }, { section: 'Optimization', items: [['fieldsDuplicated', 'Duplicate Fields'], ['workflowSchemesInactive', 'Inactive Workflows'], ['issueTypeSchemesInactive', 'Inactive Issue Schemes']] }];
         let html = '<tr><th>Metric</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
-
         for (const group of metrics) {
           html += `<tr><td colspan="${results.length + 1}" style="background:#f1f5f9; font-weight:bold; color:#475569; text-transform:uppercase; font-size:0.85rem; padding:0.8rem;">${group.section}</td></tr>`;
           for (const [key, label] of group.items) {
-            html += `<tr><td>${label}</td>` + 
-              results.map(r => {
-                let val = r[key] ?? '-';
-                let style = 'metric-value';
-                if (key.includes('Inactive') && val > 0) style += ' warning';
-                if (key.includes('Duplicate') && val > 0) style += ' danger';
-                return `<td><span class="${style}">${val}</span></td>`;
-              }).join('') + '</tr>';
+            html += `<tr><td>${label}</td>` + results.map(r => { let val = r[key] ?? '-'; let style = 'metric-value'; if (key.includes('Inactive') && val > 0) style += ' warning'; if (key.includes('Duplicate') && val > 0) style += ' danger'; return `<td><span class="${style}">${val}</span></td>`; }).join('') + '</tr>';
           }
         }
         document.getElementById('stats-table').innerHTML = html;

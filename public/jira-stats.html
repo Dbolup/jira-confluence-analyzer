@@ -3,28 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>Jira Stats</title>
-    <style>/* Same styles as previous */
-      body { margin: 0; font-family: -apple-system, sans-serif; background: #f1f5f9; padding: 2rem; color: #1e293b; }
-      .container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-      h1 { text-align: center; color: #3b82f6; margin-bottom: 2rem; }
-      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
-      .nav-btn { padding: 0.8rem 1.5rem; background: #e2e8f0; color: #64748b; border-radius: 8px; text-decoration: none; font-weight: 600; }
-      .active { background: #3b82f6; color: white; }
-      .site-block { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 10px; }
-      select, input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; }
-      .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color:white; }
-      .btn-add { background: #10b981; } .btn-go { background: #3b82f6; } .btn-up { background: #f59e0b; } .btn-clr { background: #ef4444; }
-      table { width: 100%; margin-top: 2rem; border-collapse: collapse; }
-      th, td { padding: 1rem; border-bottom: 1px solid #e2e8f0; text-align: center; }
-      th { background: #3b82f6; color: white; } td:first-child { text-align: left; background: #f8fafc; font-weight: 600; }
-    </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <style>body{margin:0;font-family:-apple-system,sans-serif;background:#f1f5f9;padding:2rem;color:#1e293b}.container{max-width:1200px;margin:0 auto;background:white;padding:2rem;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}h1{text-align:center;color:#3b82f6;margin-bottom:2rem}.nav-buttons{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem}.nav-btn{padding:0.8rem 1.5rem;background:#e2e8f0;color:#64748b;border-radius:8px;text-decoration:none;font-weight:600}.active{background:#3b82f6;color:white}.site-block{background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:8px;margin-bottom:10px}select,input{width:100%;padding:0.8rem;border:1px solid #cbd5e1;border-radius:6px}.btn{padding:0.8rem 1.5rem;border:none;border-radius:8px;cursor:pointer;font-weight:bold;color:white}.btn-add{background:#10b981}.btn-go{background:#3b82f6}.btn-up{background:#f59e0b}.btn-clr{background:#ef4444}table{width:100%;margin-top:2rem;border-collapse:collapse}th,td{padding:1rem;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#3b82f6;color:white}td:first-child{text-align:left;background:#f8fafc;font-weight:600}</style>
 </head>
 <body>
     <div class="container">
       <h1>Jira Site Stats</h1>
-      <div class="nav-buttons">
-        <a href="/" class="nav-btn">🏠 Home</a><a href="/jira-stats" class="nav-btn active">📊 Stats</a><a href="/compare" class="nav-btn">🔄 Compare</a>
-      </div>
+      <div class="nav-buttons"><a href="/" class="nav-btn">🏠 Home</a><a href="/jira-stats" class="nav-btn active">📊 Stats</a><a href="/compare" class="nav-btn">🔄 Compare</a></div>
       <div id="site-inputs"></div>
       <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
       <div style="display:flex; gap:1rem; margin-top:1rem">
@@ -98,13 +83,25 @@
           ];
           
           let h = '<table><thead><tr><th>Metric</th>';
-          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''}</th>`);
+          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''} <button style="background:transparent;border:none;cursor:pointer" onclick="dl(${i})">⬇️</button></th>`);
           h+='</tr></thead><tbody>';
           keys.forEach(([k,l]) => {
               h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';
           });
           document.getElementById('table-area').innerHTML = h + '</tbody></table>';
       }
+
+      window.dl = idx => {
+          const d = globalData[idx];
+          const filename = `jira-stats-${d.domain || d.name || 'unknown'}.json`;
+          const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+      };
     </script>
 </body>
 </html>

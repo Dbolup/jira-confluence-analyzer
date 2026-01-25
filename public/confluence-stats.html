@@ -3,107 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <title>Confluence Stats</title>
-    <style>
-      body { margin: 0; font-family: -apple-system, sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); padding: 2rem; color: #1c1e21; }
-      .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); padding: 3rem; border-radius: 20px; }
-      h1 { text-align: center; color: #4c1d95; }
-      .nav-buttons { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
-      .nav-btn { padding: 0.8rem 1.5rem; background: #f1f5f9; color: #64748b; border-radius: 12px; text-decoration: none; font-weight: 600; }
-      .active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
-      .site-block { background: white; border: 2px solid #f0f0f0; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; }
-      select { width: 100%; padding: 1rem; border: 2px solid #e2e8f0; border-radius: 8px; }
-      .btn { padding: 1rem 2rem; border: none; border-radius: 12px; cursor: pointer; color: white; font-weight: bold; }
-      .btn-add { background: #10b981; } .btn-go { background: #667eea; } .btn-up { background: #f59e0b; } .btn-clr { background: #ef4444; }
-      table { width: 100%; margin-top: 2rem; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-      th, td { padding: 1rem; border-bottom: 1px solid #f1f5f9; text-align: center; }
-      th { background: #667eea; color: white; } td:first-child { text-align: left; font-weight: 600; background: #f8fafc; }
-    </style>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+    <style>body{margin:0;font-family:-apple-system,sans-serif;background:#f1f5f9;padding:2rem;color:#1e293b}.container{max-width:1200px;margin:0 auto;background:white;padding:2rem;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}h1{text-align:center;color:#3b82f6;margin-bottom:2rem}.nav-buttons{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem}.nav-btn{padding:0.8rem 1.5rem;background:#e2e8f0;color:#64748b;border-radius:8px;text-decoration:none;font-weight:600}.active{background:#3b82f6;color:white}.site-block{background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:8px;margin-bottom:10px}select,input{width:100%;padding:0.8rem;border:1px solid #cbd5e1;border-radius:6px}.btn{padding:0.8rem 1.5rem;border:none;border-radius:8px;cursor:pointer;font-weight:bold;color:white}.btn-add{background:#10b981}.btn-go{background:#3b82f6}.btn-up{background:#f59e0b}.btn-clr{background:#ef4444}table{width:100%;margin-top:2rem;border-collapse:collapse}th,td{padding:1rem;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#3b82f6;color:white}td:first-child{text-align:left;background:#f8fafc;font-weight:600}</style>
 </head>
 <body>
     <div class="container">
       <h1>Confluence Stats</h1>
-      <div class="nav-buttons">
-        <a href="/" class="nav-btn">🏠 Home</a><a href="/confluence-stats" class="nav-btn active">📊 Stats</a><a href="/confluence-compare" class="nav-btn">⚖️ Compare</a>
-      </div>
-      
+      <div class="nav-buttons"><a href="/" class="nav-btn">🏠 Home</a><a href="/confluence-stats" class="nav-btn active">📊 Stats</a><a href="/confluence-compare" class="nav-btn">⚖️ Compare</a></div>
       <div id="site-inputs"></div>
       <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
-      
       <div style="display:flex; gap:1rem; margin-top:1rem">
         <button class="btn btn-add" onclick="addInput()">➕ Add Source</button>
-        <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload State</button>
-        <button class="btn btn-go" style="flex:2" onclick="run()">📊 Analyze</button>
+        <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload</button>
+        <button class="btn btn-go" style="flex:2" onclick="run()">🚀 Analyze</button>
         <button class="btn btn-clr" onclick="reset()">🗑️ Clear</button>
       </div>
       <div id="table-area"></div>
     </div>
-
     <script>
       let globalData = [];
+      const defCreds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
       const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
       const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
-
       addInput();
-
       function addInput() {
-        if(cloudSites.length===0 && dcConns.length===0) return window.location.href='/credentials';
         const div = document.createElement('div');
         div.className = 'site-block';
-        let opts = '<option value="">-- Select Source --</option>';
-        if(cloudSites.length) { opts += '<optgroup label="Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="cloud-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
-        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="dc-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
-        div.innerHTML = `<select class="src-select">${opts}</select>`;
+        let opts = '<option value="">-- Select Saved Source --</option>';
+        if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
+        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
+        div.innerHTML = `<div style="display:flex; gap:10px; align-items:center"><div style="flex:1"><select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select></div><div class="manual-box" style="flex:1; display:none"><input class="man-dom" placeholder="company (uses default creds)"></div><button class="btn btn-clr" style="padding:0.5rem 1rem; font-size:0.8rem" onclick="this.parentElement.parentElement.remove()">X</button></div>`;
         document.getElementById('site-inputs').appendChild(div);
       }
-
+      window.toggleManual = function(sel) { sel.parentElement.nextElementSibling.style.display = (sel.value === 'manual') ? 'block' : 'none'; };
       function reset() { globalData=[]; document.getElementById('table-area').innerHTML=''; document.getElementById('site-inputs').innerHTML=''; addInput(); }
-
-      function loadFile(input) {
-          const reader = new FileReader();
-          reader.onload = e => {
-              const d = JSON.parse(e.target.result);
-              d.isSaved = true; 
-              globalData.push(d); render();
-          };
-          reader.readAsText(input.files[0]);
-          input.value = '';
-      }
-
+      function loadFile(input) { const reader = new FileReader(); reader.onload = e => { const d = JSON.parse(e.target.result); d.isSaved=true; globalData.push(d); render(); }; reader.readAsText(input.files[0]); input.value=''; }
       async function run() {
-          const selects = document.querySelectorAll('.src-select');
+          const btn = document.querySelector('.btn-go'); btn.innerText = 'Analyzing...'; btn.disabled = true;
           const sites = [];
-          selects.forEach(s => {
-              if(!s.value) return;
-              const [type, idx] = s.value.split('-');
-              if(type==='cloud') { const c = cloudSites[idx]; sites.push({ type:'cloud', domain:c.domain, email:c.email, token:c.token }); }
-              else { const d = dcConns[idx]; sites.push({ type:'dc', ...d }); }
+          document.querySelectorAll('.site-block').forEach(div => {
+              const sel = div.querySelector('.src-select');
+              if(sel.value === 'manual') {
+                  const dom = div.querySelector('.man-dom').value;
+                  if(dom && defCreds.email) sites.push({ type:'cloud', domain: dom, email: defCreds.email, token: defCreds.token });
+              } else if (sel.value) {
+                  const [type, idx] = sel.value.split('-');
+                  if(type==='c') { const s = cloudSites[idx]; sites.push({ type:'cloud', domain:s.domain, email:s.email, token:s.token }); }
+                  else { sites.push({ type:'dc', ...dcConns[idx] }); }
+              }
           });
-
           if(sites.length) {
               try {
-                  const res = await fetch('/api/confluence/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sites}) });
+                  const res = await fetch('/api/confluence/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sites}) });
                   const data = await res.json();
                   globalData = [...globalData, ...data.results];
                   render();
               } catch(e) { alert(e.message); }
           }
+          btn.innerText = '🚀 Analyze'; btn.disabled = false;
       }
-
       window.dl = idx => {
           const d = globalData[idx];
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)], {type:'application/json'}));
-          a.download = `conf-stats-${d.domain}.json`; a.click();
+          const filename = `confluence-stats-${d.domain || d.name || 'unknown'}.json`;
+          const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); window.URL.revokeObjectURL(url);
       };
-
       function render() {
           const keys = [['total','Total Spaces'],['active','Active Spaces'],['archived','Archived'],['global','Global Spaces'],['personal','Personal Spaces'],['type','Source Type']];
           let h = '<table><thead><tr><th>Metric</th>';
-          globalData.forEach((d,i) => h+=`<th>${d.domain}${d.isSaved?'<br>📂 Saved':''} <button onclick="dl(${i})">⬇️</button></th>`);
+          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''} <button style="background:transparent;border:none;cursor:pointer" onclick="dl(${i})">⬇️</button></th>`);
           h+='</tr></thead><tbody>';
-          keys.forEach(([k,l]) => {
-              h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';
-          });
+          keys.forEach(([k,l]) => { h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>'; });
           document.getElementById('table-area').innerHTML = h + '</tbody></table>';
       }
     </script>

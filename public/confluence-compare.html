@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Confluence Space Comparison</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
     <style>
         body { margin: 0; font-family: -apple-system, sans-serif; background: #f1f5f9; padding: 2rem; color:#1e293b; }
         .container { max-width: 1400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         h1 { text-align: center; color: #3b82f6; margin-bottom: 2rem; }
-        
         .nav { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
         .nav a { padding: 0.8rem 1.5rem; background: #e2e8f0; color: #64748b; text-decoration: none; border-radius: 8px; font-weight: 600; transition: 0.2s; }
         .nav a:hover { background: #cbd5e1; }
         .nav a.active { background: #3b82f6; color: white; }
-
         .row-card { background: #f8fafc; padding: 1rem; border-radius: 8px; display: flex; gap: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; align-items: flex-end; }
         .col { flex: 1; }
         label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 5px; }
         select, input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
-        
         .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .btn-add { background: #10b981; } .btn-add:hover { background: #059669; }
         .btn-run { background: #3b82f6; } .btn-run:hover { background: #2563eb; }
         .btn-del { background: #ef4444; padding: 0.8rem; } .btn-del:hover { background: #dc2626; }
         .btn-print { background: #64748b; margin-left: auto; }
-        
         .table-wrapper { overflow-x: auto; margin-top: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         table { width: 100%; border-collapse: collapse; background: white; }
         th, td { padding: 1rem; text-align: center; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -35,20 +32,9 @@
 <body>
     <div class="container">
         <h1>Confluence Space Comparison</h1>
-        <div class="nav">
-            <a href="/">🏠 Home</a>
-            <a href="/confluence-stats">📊 Stats</a>
-            <a href="/confluence-compare" class="active">⚖️ Compare</a>
-        </div>
-
+        <div class="nav"><a href="/">🏠 Home</a><a href="/confluence-stats">📊 Stats</a><a href="/confluence-compare" class="active">⚖️ Compare</a></div>
         <div id="rows-container"></div>
-        
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-            <button class="btn btn-add" onclick="addRow()">➕ Add Space</button>
-            <button class="btn btn-run" onclick="runCompare()">🔍 Run Comparison</button>
-            <button class="btn btn-print" onclick="window.print()">📄 Print / PDF</button>
-        </div>
-
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;"><button class="btn btn-add" onclick="addRow()">➕ Add Space</button><button class="btn btn-run" onclick="runCompare()">🔍 Run Comparison</button><button class="btn btn-print" onclick="window.print()">📄 Print / PDF</button></div>
         <div id="results-area"></div>
     </div>
 
@@ -56,73 +42,39 @@
         const defCreds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
         const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
         const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
-
         addRow(); addRow();
 
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row-card';
-            
             let opts = '<option value="">-- Select Source --</option>';
             if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
             if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
-
-            div.innerHTML = `
-                <div class="col" style="flex:0.8">
-                    <label>Source</label>
-                    <select class="src-select" onchange="loadSpaces(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select>
-                    <input class="man-dom" placeholder="domain (using default creds)" style="display:none; margin-top:5px" onblur="loadSpaces(this.previousElementSibling)">
-                </div>
-                <div class="col" style="flex:1.5">
-                    <label>Space</label>
-                    <select class="space-select" disabled><option>Select source first...</option></select>
-                </div>
-                <button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>
-            `;
+            div.innerHTML = `<div class="col" style="flex:0.8"><label>Source</label><select class="src-select" onchange="loadSpaces(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select><input class="man-dom" placeholder="domain (using default creds)" style="display:none; margin-top:5px" onblur="loadSpaces(this.previousElementSibling)"></div><div class="col" style="flex:1.5"><label>Space</label><select class="space-select" disabled><option>Select source first...</option></select></div><button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>`;
             document.getElementById('rows-container').appendChild(div);
         }
 
         async function loadSpaces(el) {
-            const val = el.value;
-            const manInp = el.nextElementSibling;
-            const spaceSelect = el.parentElement.nextElementSibling.querySelector('select');
-            
+            const val = el.value; const manInp = el.nextElementSibling; const spaceSelect = el.parentElement.nextElementSibling.querySelector('select');
             let config = {};
-
             if(val === 'manual') {
-                manInp.style.display = 'block';
-                if(!manInp.value) return; // Wait for input
-                if(!defCreds.email) return alert('Save default creds first');
+                manInp.style.display = 'block'; if(!manInp.value) return;
+                if(!defCreds.email) return alert('Save default creds');
                 config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token };
             } else {
-                manInp.style.display = 'none';
-                if(!val) { spaceSelect.disabled=true; return; }
+                manInp.style.display = 'none'; if(!val) { spaceSelect.disabled=true; return; }
                 const [type, idx] = val.split('-');
                 if(type==='c') { const c = cloudSites[idx]; config = { type:'cloud', ...c }; }
                 else { const d = dcConns[idx]; config = { type:'dc', ...d }; }
             }
-
             spaceSelect.innerHTML = '<option>Loading...</option>';
-            
             try {
-                const res = await fetch('/api/confluence/spaces', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sources: [config] })
-                });
+                const res = await fetch('/api/confluence/spaces', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sources: [config] }) });
                 const data = await res.json();
-                
-                if(data.results[0].error) throw new Error(data.results[0].error);
-
                 let html = '<option value="">-- Select Space --</option>';
-                data.results[0].spaces.forEach(s => {
-                    html += `<option value="${s.key}" data-name="${s.name}" data-source='${JSON.stringify(config)}'>${s.name} (${s.key})</option>`;
-                });
-                spaceSelect.innerHTML = html;
-                spaceSelect.disabled = false;
-            } catch(e) { 
-                spaceSelect.innerHTML = `<option>Error: ${e.message}</option>`; 
-            }
+                data.results[0].spaces.forEach(s => { html += `<option value="${s.key}" data-name="${s.name}" data-source='${JSON.stringify(config)}'>${s.name} (${s.key})</option>`; });
+                spaceSelect.innerHTML = html; spaceSelect.disabled = false;
+            } catch(e) { spaceSelect.innerHTML = `<option>Error: ${e.message}</option>`; }
         }
 
         async function runCompare() {
@@ -130,49 +82,22 @@
             document.querySelectorAll('.space-select').forEach(s => {
                 if(s.value && !s.disabled) {
                     const opt = s.options[s.selectedIndex];
-                    spaces.push({
-                        source: JSON.parse(opt.getAttribute('data-source')),
-                        spaceKey: s.value,
-                        spaceName: opt.getAttribute('data-name')
-                    });
+                    spaces.push({ source: JSON.parse(opt.getAttribute('data-source')), spaceKey: s.value, spaceName: opt.getAttribute('data-name') });
                 }
             });
-
             if(!spaces.length) return alert("Please select at least one space");
 
-            const btn = document.querySelector('.btn-run');
-            const oldText = btn.innerText;
-            btn.innerText = 'Processing...'; btn.disabled = true;
-            
-            const area = document.getElementById('results-area');
-            area.innerHTML = '';
+            const btn = document.querySelector('.btn-run'); btn.innerText = 'Processing...'; btn.disabled = true;
+            const area = document.getElementById('results-area'); area.innerHTML = '';
 
             try {
-                const res = await fetch('/api/confluence/compare-spaces', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ spaces })
-                });
+                const res = await fetch('/api/confluence/compare-spaces', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ spaces }) });
                 const data = await res.json();
-
-                // Detailed Metrics
-                const metrics = [
-                    ['owner', '👤 Owner'],
-                    ['pages', '📄 Pages'],
-                    ['blogposts', '📰 Blog Posts'],
-                    ['attachments', '📎 Attachments'],
-                    ['databases', '🗄️ Databases'],
-                    ['whiteboards', '📝 Whiteboards'],
-                    ['folders', '📂 Folders'],
-                    ['smartlinks', '🔗 Smart Links'],
-                    ['calendars', '📅 Calendars'],
-                    ['spaceCalendars', '🗓️ Space Calendars']
-                ];
-
+                const metrics = [['owner', '👤 Owner'],['pages', '📄 Pages'],['blogposts', '📰 Blog Posts'],['attachments', '📎 Attachments'],['databases', '🗄️ Databases'],['whiteboards', '📝 Whiteboards'],['folders', '📂 Folders'],['smartlinks', '🔗 Smart Links'],['calendars', '📅 Calendars'],['spaceCalendars', '🗓️ Space Calendars']];
+                
                 let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
                 data.results.forEach(r => {
-                    // FIX: Reliable Header Name (Handles string or object source)
-                    const headerName = r.domain || r.source.domain || r.source.name || r.source || "Unknown";
+                    const headerName = r.domain || r.source.domain || r.source.name || r.source || "Unknown Source";
                     html += `<th>${headerName}<br><span style="font-size:0.8em; opacity:0.8">${r.spaceName} (${r.type})</span></th>`;
                 });
                 html += '</tr></thead><tbody>';
@@ -181,18 +106,13 @@
                     html += `<tr><td>${label}</td>` + 
                     data.results.map(r => {
                         if(r.error) return `<td style="color:red">Error</td>`;
-                        
-                        // Handle DC fields that return null (Databases, Whiteboards etc)
                         if(r[key] === null) return `<td style="color:#94a3b8; font-style:italic">N/A</td>`;
-                        
                         return `<td><span class="metric-value">${r[key]||0}</span></td>`;
                     }).join('') + '</tr>';
                 });
-
                 area.innerHTML = html + '</tbody></table></div>';
             } catch(e) { alert(e.message); }
-            
-            btn.innerText = oldText; btn.disabled = false;
+            btn.innerText = '🔍 Run Comparison'; btn.disabled = false;
         }
     </script>
 </body>
