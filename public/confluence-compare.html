@@ -42,6 +42,7 @@
         const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
         const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
         addRow(); addRow();
+
         function addRow() {
             const div = document.createElement('div'); div.className = 'row-card';
             let opts = '<option value="">-- Select Source --</option>';
@@ -50,10 +51,11 @@
             div.innerHTML = `<div class="col" style="flex:0.8"><label>Source</label><select class="src-select" onchange="loadSpaces(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select><input class="man-dom" placeholder="domain (using default creds)" style="display:none; margin-top:5px" onblur="loadSpaces(this.previousElementSibling)"></div><div class="col" style="flex:1.5"><label>Space</label><select class="space-select" disabled><option>Select source first...</option></select></div><button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>`;
             document.getElementById('rows-container').appendChild(div);
         }
+
         async function loadSpaces(el) {
             const val = el.value; const manInp = el.nextElementSibling; const spaceSelect = el.parentElement.nextElementSibling.querySelector('select');
             let config = {};
-            if(val === 'manual') { manInp.style.display = 'block'; if(!manInp.value) return; if(!defCreds.email) return alert('Save default creds'); config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token }; }
+            if(val === 'manual') { manInp.style.display = 'block'; if(!manInp.value) return; if(!defCreds.email) return alert('Save default creds first'); config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token }; }
             else { manInp.style.display = 'none'; if(!val) { spaceSelect.disabled=true; return; } const [type, idx] = val.split('-'); if(type==='c') { const c = cloudSites[idx]; config = { type:'cloud', ...c }; } else { const d = dcConns[idx]; config = { type:'dc', ...d }; } }
             spaceSelect.innerHTML = '<option>Loading...</option>';
             try {
@@ -64,19 +66,20 @@
                 spaceSelect.innerHTML = html; spaceSelect.disabled = false;
             } catch(e) { spaceSelect.innerHTML = `<option>Error: ${e.message}</option>`; }
         }
+
         async function runCompare() {
             const spaces = [];
             document.querySelectorAll('.space-select').forEach(s => { if(s.value && !s.disabled) { const opt = s.options[s.selectedIndex]; spaces.push({ source: JSON.parse(opt.getAttribute('data-source')), spaceKey: s.value, spaceName: opt.getAttribute('data-name') }); } });
-            if(!spaces.length) return alert("Select space");
+            if(!spaces.length) return alert("Please select at least one space");
             const btn = document.querySelector('.btn-run'); const oldText = btn.innerText; btn.innerText = 'Processing...'; btn.disabled = true;
             try {
                 const res = await fetch('/api/confluence/compare-spaces', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ spaces }) });
                 const data = await res.json();
                 const metrics = [['owner', '👤 Owner'],['pages', '📄 Pages'],['blogposts', '📰 Blog Posts'],['attachments', '📎 Attachments'],['databases', '🗄️ Databases'],['whiteboards', '📝 Whiteboards'],['folders', '📂 Folders'],['smartlinks', '🔗 Smart Links'],['calendars', '📅 Calendars'],['spaceCalendars', '🗓️ Space Calendars']];
                 let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
-                data.results.forEach(r => { const headerName = r.source.domain || r.source.name || r.source || "Unknown"; html += `<th>${headerName}<br><span style="font-size:0.8em; opacity:0.8">${r.spaceName} (${r.type})</span></th>`; });
+                data.results.forEach(r => { const headerName = r.source.domain || r.source.name || r.source || "Unknown Source"; html += `<th>${headerName}<br><span style="font-size:0.8em; opacity:0.8">${r.spaceName} (${r.type})</span></th>`; });
                 html += '</tr></thead><tbody>';
-                metrics.forEach(([key, label]) => { html += `<tr><td>${label}</td>` + data.results.map(r => { if(r.error) return `<td style="color:red" title="${r.error}">Error</td>`; if(r[key] === null) return `<td style="color:#94a3b8; font-style:italic">N/A</td>`; return `<td><span class="metric-value">${r[key]||0}</span></td>`; }).join('') + '</tr>'; });
+                metrics.forEach(([key, label]) => { html += `<tr><td>${label}</td>` + data.results.map(r => { if(r.error) return `<td style="color:red">Error</td>`; if(r[key] === null) return `<td style="color:#94a3b8; font-style:italic">N/A</td>`; return `<td><span class="metric-value">${r[key]||0}</span></td>`; }).join('') + '</tr>'; });
                 document.getElementById('results-area').innerHTML = html + '</tbody></table></div>';
             } catch(e) { alert(e.message); }
             btn.innerText = oldText; btn.disabled = false;

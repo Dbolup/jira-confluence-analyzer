@@ -27,7 +27,8 @@
             let opts = '<option value="">-- Select Source --</option>';
             if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
             if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
-            div.innerHTML = `<div style="flex:1"><label>Source</label><select class="src-select" onchange="loadProjs(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select><input class="man-dom" placeholder="domain" style="display:none;margin-top:5px" onblur="loadProjs(this.previousElementSibling)"></div><div style="flex:1.5"><label>Project</label><select class="p-select" disabled><option>Select source first...</option></select></div><button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>`;
+            
+            div.innerHTML = `<div style="flex:1"><label>Source</label><select class="src-select" onchange="loadProjs(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select><input class="man-dom" placeholder="domain (using default creds)" style="display:none;margin-top:5px" onblur="loadProjs(this.previousElementSibling)"></div><div style="flex:1.5"><label>Project</label><select class="p-select" disabled><option>Select source first...</option></select></div><button class="btn btn-del" onclick="this.parentElement.remove()">✕</button>`;
             document.getElementById('rows-container').appendChild(div);
         }
 
@@ -35,8 +36,8 @@
             const val = el.value; const manInp = el.nextElementSibling; const pSel = el.parentElement.nextElementSibling.querySelector('select');
             let config = {};
             if(val === 'manual') {
-                manInp.style.display = 'block'; if(!manInp.value) return;
-                if(!defCreds.email) return alert('Save default creds');
+                manInp.style.display = 'block'; if(!manInp.value) return; 
+                if(!defCreds.email) return alert('Save default creds first');
                 config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token };
             } else {
                 manInp.style.display = 'none'; if(!val) { pSel.disabled=true; return; }
@@ -44,6 +45,7 @@
                 if(type==='c') { const c = cloudSites[idx]; config = { type:'cloud', ...c }; }
                 else { const d = dcConns[idx]; config = { type:'dc', ...d }; }
             }
+
             pSel.innerHTML = '<option>Loading...</option>';
             try {
                 const res = await fetch('/api/projects', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sources: [config] }) });
@@ -62,14 +64,28 @@
                     selection.push({ source: JSON.parse(opt.dataset.src), projectKey: s.value, projectId: opt.dataset.id });
                 }
             });
-            if(!selection.length) return alert("Select projects");
+            if(!selection.length) return alert("Please select at least one project");
 
-            const btn = document.querySelector('.btn-run'); btn.innerText = 'Processing...'; btn.disabled = true;
+            const btn = document.querySelector('.btn-run');
+            const oldText = btn.innerText;
+            btn.innerText = 'Processing...'; btn.disabled = true;
+            
+            const area = document.getElementById('results-area');
+            area.innerHTML = '';
+
             try {
                 const res = await fetch('/api/compare-projects', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ selection }) });
                 const data = await res.json();
-                const metrics = [['name', '📝 Name'], ['lead', '👤 Lead'], ['issueCount', '🎫 Issues'], ['componentCount', '🧩 Components'], ['workflowScheme', '🔄 Workflow Scheme'], ['issueTypeScheme', '📋 Issue Type Scheme'], ['priorityScheme', '🎯 Priority Scheme'], ['fieldConfiguration', '⚙️ Field Config'], ['permissionScheme', '🔐 Permission Scheme'], ['notificationScheme', '📧 Notification Scheme'], ['issueTypeScreenScheme', '📱 Screen Scheme'], ['statuses', '📊 Statuses']];
-                
+
+                const metrics = [
+                    ['name', '📝 Project Name'], ['lead', '👤 Project Lead'],
+                    ['issueCount', '🎫 Issue Count'], ['componentCount', '🧩 Components'],
+                    ['workflowScheme', '🔄 Workflow Scheme'], ['issueTypeScheme', '📋 Issue Type Scheme'],
+                    ['priorityScheme', '🎯 Priority Scheme'], ['fieldConfiguration', '⚙️ Field Config'],
+                    ['permissionScheme', '🔐 Permission Scheme'], ['notificationScheme', '📧 Notification Scheme'],
+                    ['issueTypeScreenScheme', '📱 Issue Type Screen Scheme'], ['statuses', '📊 Statuses']
+                ];
+
                 let html = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
                 data.results.forEach(r => {
                     const title = r.source.domain || r.source.name || r.source || "Unknown";
@@ -81,20 +97,31 @@
                     html += `<tr><td>${label}</td>` + 
                     data.results.map(r => {
                         if(r.error) return `<td style="color:red">Error</td>`;
+                        
                         let val = r[key] || '-';
                         if(val === 'Skipped' || val === 'Skipped (DC)') return `<td style="color:#aaa; font-style:italic">Skipped (DC)</td>`;
+                        
                         if(key === 'statuses' && val.length > 60) {
                             const uid = 's' + Math.random().toString(36).substr(2,9);
                             return `<td><span id="short-${uid}">${val.substring(0,60)}...</span><span id="full-${uid}" style="display:none">${val}</span><div onclick="toggleText('${uid}')" class="more-link">View More</div></td>`;
                         }
+                        
                         return `<td><span class="metric-value">${val}</span></td>`;
                     }).join('') + '</tr>';
                 });
-                document.getElementById('results-area').innerHTML = html + '</tbody></table></div>';
+
+                area.innerHTML = html + '</tbody></table></div>';
             } catch(e) { alert(e.message); }
-            btn.innerText = '🔍 Run Comparison'; btn.disabled = false;
+            
+            btn.innerText = oldText; btn.disabled = false;
         }
-        function toggleText(id) { const s=document.getElementById('short-'+id), f=document.getElementById('full-'+id); if(f.style.display==='none'){f.style.display='inline';s.style.display='none'}else{f.style.display='none';s.style.display='inline'} }
+
+        function toggleText(id) {
+            const shortSpan = document.getElementById('short-' + id);
+            const fullSpan = document.getElementById('full-' + id);
+            if(fullSpan.style.display === 'none') { fullSpan.style.display = 'inline'; shortSpan.style.display = 'none'; }
+            else { fullSpan.style.display = 'none'; shortSpan.style.display = 'inline'; }
+        }
     </script>
 </body>
 </html>

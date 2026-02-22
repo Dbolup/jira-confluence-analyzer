@@ -70,6 +70,18 @@
           btn.innerText = '🚀 Analyze'; btn.disabled = false;
       }
 
+      window.dl = idx => {
+          const d = globalData[idx];
+          const filename = `jira-stats-${d.domain || d.name || 'unknown'}.json`;
+          const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+      };
+
       function render() {
           // ISSUE COUNT REMOVED
           const keys = [
@@ -90,18 +102,6 @@
           });
           document.getElementById('table-area').innerHTML = h + '</tbody></table>';
       }
-
-      window.dl = idx => {
-          const d = globalData[idx];
-          const filename = `jira-stats-${d.domain || d.name || 'unknown'}.json`;
-          const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          window.URL.revokeObjectURL(url);
-      };
     </script>
 </body>
 </html>
