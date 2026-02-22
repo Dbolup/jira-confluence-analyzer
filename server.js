@@ -215,46 +215,32 @@ app.post('/api/compare-projects', async (req, res, next) => {
                         if(typeof countReq.count === 'number') issueCount = countReq.count;
                     } catch(e) {}
 
-                    // Fetch 1: Get standard endpoints 
+                    // Fetch exactly the endpoints for the mapped schemes
                     const [perm, notif, wfScheme, itScheme, prioList, screenMap, fcMap, stats] = await Promise.all([
                         safeFetch(`${baseUrl}/project/${pKey}/permissionscheme`),
                         safeFetch(`${baseUrl}/project/${pKey}/notificationscheme`),
                         safeFetch(`${baseUrl}/workflowscheme/project?projectId=${pId}`),
                         safeFetch(`${baseUrl}/issuetypescheme/project?projectId=${pId}`),
                         safeFetch(`${baseUrl}/priorityscheme?expand=projects`),
-                        safeFetch(`${baseUrl}/issuetypescreenscheme/project?projectId=${pId}`), // Extract nested 'issueTypeScreenScheme.name'
-                        safeFetch(`${baseUrl}/config/fieldschemes?projectId=${pId}`), // NEW ENDPOINT
+                        safeFetch(`${baseUrl}/issuetypescreenscheme/project?projectId=${pId}`),
+                        safeFetch(`${baseUrl}/fieldconfigurationscheme/project?projectId=${pId}`),
                         safeFetch(`${baseUrl}/project/${pKey}/statuses`)
                     ]);
 
-                    // Parse Workflow and Issue Type
+                    // Parse Workflow, Issue Type, Screen, and Field Config directly from the values array
                     const workflowName = wfScheme.values?.[0]?.workflowScheme?.name || "-";
                     const issueTypeName = itScheme.values?.[0]?.issueTypeScheme?.name || "-";
+                    const screenName = screenMap.values?.[0]?.issueTypeScreenScheme?.name || "-";
+                    const fieldConfigName = fcMap.values?.[0]?.fieldConfigurationScheme?.name || "-";
 
-                    // Parse Priority 
+                    // Parse Priority (Match project inside the expanded projects array)
                     let priorityName = "-";
                     if (prioList.values) {
                         const found = prioList.values.find(s => s.projects?.values?.some(p => String(p.id) === String(pId)));
                         if (found) priorityName = found.name;
                     }
 
-                    // Parse Issue Type Screen Scheme 
-                    let screenName = "-";
-                    if (screenMap.values && screenMap.values.length > 0) {
-                        screenName = screenMap.values[0].issueTypeScreenScheme?.name || "-";
-                    } else if (screenMap.issueTypeScreenScheme?.name) {
-                        screenName = screenMap.issueTypeScreenScheme.name;
-                    }
-
-                    // Parse Field Configuration Scheme
-                    let fieldConfigName = "-";
-                    if (fcMap.values && fcMap.values.length > 0) {
-                        fieldConfigName = fcMap.values[0].name || "-";
-                    } else if (fcMap.name) {
-                        fieldConfigName = fcMap.name;
-                    }
-
-                    // Parse Statuses
+                    // Format Statuses
                     let statusList = "-";
                     if(Array.isArray(stats)) {
                         const set = new Set();
@@ -263,8 +249,8 @@ app.post('/api/compare-projects', async (req, res, next) => {
                         if (result) statusList = result;
                     }
 
+                    // Label Team-Managed projects (which don't use classic schemes)
                     const isTeamManaged = proj.style === 'next-gen';
-                    const label = isTeamManaged ? 'Team-Managed' : '-';
 
                     return {
                         domain: src.domain, source: src.domain, name: proj.name, key: proj.key, type: 'Cloud',
