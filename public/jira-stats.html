@@ -3,25 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <title>Jira Stats</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-    <style>body{margin:0;font-family:-apple-system,sans-serif;background:#f1f5f9;padding:2rem;color:#1e293b}.container{max-width:1200px;margin:0 auto;background:white;padding:2rem;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}h1{text-align:center;color:#3b82f6;margin-bottom:2rem}.nav-buttons{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem}.nav-btn{padding:0.8rem 1.5rem;background:#e2e8f0;color:#64748b;border-radius:8px;text-decoration:none;font-weight:600}.active{background:#3b82f6;color:white}.site-block{background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:8px;margin-bottom:10px}select,input{width:100%;padding:0.8rem;border:1px solid #cbd5e1;border-radius:6px}.btn{padding:0.8rem 1.5rem;border:none;border-radius:8px;cursor:pointer;font-weight:bold;color:white}.btn-add{background:#10b981}.btn-go{background:#3b82f6}.btn-up{background:#f59e0b}.btn-clr{background:#ef4444}table{width:100%;margin-top:2rem;border-collapse:collapse}th,td{padding:1rem;border-bottom:1px solid #e2e8f0;text-align:center}th{background:#3b82f6;color:white}td:first-child{text-align:left;background:#f8fafc;font-weight:600}</style>
+    <style>
+        :root { --bg: #ffffff; --fg: #000000; --border: #e5e5e5; --sidebar: #0a0a0a; --sidebar-text: #a3a3a3; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+        body { display: flex; height: 100vh; background: var(--bg); color: var(--fg); overflow: hidden; }
+        
+        .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; padding: 2.5rem 2rem; border-right: 1px solid #222; }
+        .logo { color: #fff; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 3rem; text-transform: uppercase; }
+        .nav-item { display: block; color: var(--sidebar-text); text-decoration: none; padding: 0.6rem 0; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
+        .nav-item:hover, .nav-item.active { color: #fff; }
+        .nav-group { margin-bottom: 1.5rem; }
+        .nav-title { display: flex; justify-content: space-between; color: #fff; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0.6rem 0; cursor: pointer; border-bottom: 1px solid #333; margin-bottom: 0.5rem; }
+        .submenu { display: none; padding-left: 0.5rem; } .submenu.open { display: block; }
+        
+        .main-content { flex: 1; overflow-y: auto; padding: 3rem 4rem; }
+        h1 { font-size: 1.8rem; font-weight: 400; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; letter-spacing: -0.5px; }
+        
+        .btn { background: var(--fg); color: var(--bg); border: 1px solid var(--fg); padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+        .btn:hover { background: var(--bg); color: var(--fg); }
+        .btn-ghost { background: transparent; color: var(--fg); border-color: transparent; }
+        .btn-ghost:hover { border-color: var(--fg); }
+        
+        .site-block { border: 1px solid var(--border); padding: 1rem; margin-bottom: 1rem; background: #fafafa; }
+        select, input { width: 100%; padding: 0.6rem; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-size: 0.9rem; }
+        select:focus, input:focus { outline: none; border-color: var(--fg); }
+        
+        .table-wrapper { overflow-x: auto; margin-top: 2rem; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 1rem; border-bottom: 1px solid var(--border); text-align: left; }
+        th { font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; color: #666; background: #fafafa; border-right: 1px solid var(--border); }
+        td { border-right: 1px solid var(--border); font-family: monospace; font-size: 0.9rem; }
+        td:first-child { font-weight: 600; font-family: 'Inter', sans-serif; background: #fafafa; color: #000; }
+        tr:last-child td { border-bottom: none; }
+    </style>
 </head>
 <body>
-    <div class="container">
-      <h1>Jira Site Stats</h1>
-      <div class="nav-buttons"><a href="/" class="nav-btn">🏠 Home</a><a href="/jira-stats" class="nav-btn active">📊 Stats</a><a href="/compare" class="nav-btn">🔄 Compare</a></div>
-      <div id="site-inputs"></div>
-      <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
-      <div style="display:flex; gap:1rem; margin-top:1rem">
-        <button class="btn btn-add" onclick="addInput()">➕ Add Source</button>
-        <button class="btn btn-up" onclick="document.getElementById('up').click()">📂 Upload</button>
-        <button class="btn btn-go" style="flex:2" onclick="run()">🚀 Analyze</button>
-        <button class="btn btn-clr" onclick="reset()">🗑️ Clear</button>
-      </div>
-      <div id="table-area"></div>
+    <div class="sidebar">
+        <div class="logo">Analyzer</div>
+        
+        <div class="nav-group">
+            <a href="/" class="nav-title" style="text-decoration: none; display: block;">HOME</a>
+        </div>
+        
+        <div class="nav-group">
+            <a href="/credentials" class="nav-title" style="text-decoration: none; display: block;">CREDENTIALS</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title" onclick="toggleMenu('jira-menu')">JIRA <span id="jira-icon">+</span></div>
+            <div class="submenu" id="jira-menu">
+                <a href="/jira-stats" class="nav-item">General Stats</a>
+                <a href="/compare" class="nav-item">Compare Projects</a>
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title" onclick="toggleMenu('conf-menu')">CONFLUENCE <span id="conf-icon">+</span></div>
+            <div class="submenu" id="conf-menu">
+                <a href="/confluence-stats" class="nav-item">General Stats</a>
+                <a href="/confluence-compare" class="nav-item">Compare Spaces</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <h1>Jira Site Stats</h1>
+        <div id="site-inputs"></div>
+        <input type="file" id="up" accept=".json" style="display:none" onchange="loadFile(this)">
+        <div style="display:flex; gap:1rem; margin-top:1.5rem">
+            <button class="btn btn-ghost" style="border:1px solid #000" onclick="addInput()">Add Source</button>
+            <button class="btn btn-ghost" style="border:1px solid #000" onclick="document.getElementById('up').click()">Upload Data</button>
+            <button class="btn" style="margin-left:auto" onclick="run()">Run Analysis</button>
+            <button class="btn btn-ghost" onclick="reset()">Clear</button>
+        </div>
+        <div id="table-area"></div>
     </div>
 
     <script>
+      function toggleMenu(id) { const el = document.getElementById(id); const icon = document.getElementById(id.split('-')[0] + '-icon'); if(el.classList.contains('open')) { el.classList.remove('open'); icon.innerText = '+'; } else { el.classList.add('open'); icon.innerText = '-'; } }
+      
       let globalData = [];
       const defCreds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
       const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
@@ -30,12 +90,11 @@
       addInput();
 
       function addInput() {
-        const div = document.createElement('div');
-        div.className = 'site-block';
+        const div = document.createElement('div'); div.className = 'site-block';
         let opts = '<option value="">-- Select Saved Source --</option>';
-        if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">☁️ ${s.domain}</option>`); opts += '</optgroup>'; }
-        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">🏢 ${s.name}</option>`); opts += '</optgroup>'; }
-        div.innerHTML = `<div style="display:flex; gap:10px; align-items:center"><div style="flex:1"><select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">➕ Manual Cloud Domain...</option></select></div><div class="manual-box" style="flex:1; display:none"><input class="man-dom" placeholder="company (uses default creds)"></div><button class="btn btn-clr" style="padding:0.5rem 1rem; font-size:0.8rem" onclick="this.parentElement.parentElement.remove()">X</button></div>`;
+        if(cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s,i)=>opts+=`<option value="c-${i}">${s.domain}</option>`); opts += '</optgroup>'; }
+        if(dcConns.length) { opts += '<optgroup label="Data Center">'; dcConns.forEach((s,i)=>opts+=`<option value="d-${i}">${s.name}</option>`); opts += '</optgroup>'; }
+        div.innerHTML = `<div style="display:flex; gap:10px; align-items:center"><div style="flex:1"><select class="src-select" onchange="toggleManual(this)">${opts}<option value="manual">Manual Cloud Domain...</option></select></div><div class="manual-box" style="flex:1; display:none"><input class="man-dom" placeholder="company (uses default creds)"></div><button class="btn btn-ghost" style="padding:0.5rem 1rem" onclick="this.parentElement.parentElement.remove()">✕</button></div>`;
         document.getElementById('site-inputs').appendChild(div);
       }
 
@@ -44,63 +103,31 @@
       function loadFile(input) { const reader = new FileReader(); reader.onload = e => { const d = JSON.parse(e.target.result); d.isSaved=true; globalData.push(d); render(); }; reader.readAsText(input.files[0]); input.value=''; }
 
       async function run() {
-          const btn = document.querySelector('.btn-go');
-          btn.innerText = 'Analyzing...'; btn.disabled = true;
+          const btn = document.querySelector('.btn'); btn.innerText = 'Analyzing...'; btn.disabled = true;
           const sites = [];
           document.querySelectorAll('.site-block').forEach(div => {
               const sel = div.querySelector('.src-select');
-              if(sel.value === 'manual') {
-                  const dom = div.querySelector('.man-dom').value;
-                  if(dom && defCreds.email) sites.push({ type:'cloud', domain: dom, email: defCreds.email, token: defCreds.token });
-                  else alert('Manual entry requires Default Creds saved in Settings.');
-              } else if (sel.value) {
-                  const [type, idx] = sel.value.split('-');
-                  if(type==='c') { const s = cloudSites[idx]; sites.push({ type:'cloud', domain:s.domain, email:s.email, token:s.token }); }
-                  else { sites.push({ type:'dc', ...dcConns[idx] }); }
-              }
+              if(sel.value === 'manual') { const dom = div.querySelector('.man-dom').value; if(dom && defCreds.email) sites.push({ type:'cloud', domain: dom, email: defCreds.email, token: defCreds.token }); else alert('Manual entry requires Default Creds saved in Settings.'); } 
+              else if (sel.value) { const [type, idx] = sel.value.split('-'); if(type==='c') { const s = cloudSites[idx]; sites.push({ type:'cloud', domain:s.domain, email:s.email, token:s.token }); } else { sites.push({ type:'dc', ...dcConns[idx] }); } }
           });
           if(sites.length) {
               try {
                   const res = await fetch('/api/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sites}) });
-                  const data = await res.json();
-                  globalData = [...globalData, ...data.results];
-                  render();
+                  const data = await res.json(); globalData = [...globalData, ...data.results]; render();
               } catch(e) { alert(e.message); }
           }
-          btn.innerText = '🚀 Analyze'; btn.disabled = false;
+          btn.innerText = 'Run Analysis'; btn.disabled = false;
       }
 
-      window.dl = idx => {
-          const d = globalData[idx];
-          const filename = `jira-stats-${d.domain || d.name || 'unknown'}.json`;
-          const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          window.URL.revokeObjectURL(url);
-      };
+      window.dl = idx => { const d = globalData[idx]; const filename = `jira-stats-${d.domain || d.name || 'unknown'}.json`; const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); window.URL.revokeObjectURL(url); };
 
       function render() {
-          // ISSUE COUNT REMOVED
-          const keys = [
-              ['projectCount','Projects'],['workflowCount','Workflows'],['workflowSchemeCount','Workflow Schemes'],
-              ['fieldCount','Fields'],['fieldConfigurationSchemeCount','Field Config Schemes'],
-              ['issueTypeCount','Issue Types'],['issueTypeSchemeCount','Issue Type Schemes'],
-              ['priorityCount','Priorities'],['statusCount','Statuses'],
-              ['screenCount','Screens'],['screenSchemeCount','Screen Schemes'],['issueTypeScreenSchemeCount','Issue Type Screen Schemes'],
-              ['notificationSchemeCount','Notification Schemes'],['permissionSchemeCount','Permission Schemes'],['issueSecuritySchemeCount','Security Schemes'],
-              ['type','Source Type']
-          ];
-          
-          let h = '<table><thead><tr><th>Metric</th>';
-          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''} <button style="background:transparent;border:none;cursor:pointer" onclick="dl(${i})">⬇️</button></th>`);
+          const keys = [['projectCount','Projects'],['workflowCount','Workflows'],['workflowSchemeCount','Workflow Schemes'],['fieldCount','Fields'],['fieldConfigurationSchemeCount','Field Config Schemes'],['issueTypeCount','Issue Types'],['issueTypeSchemeCount','Issue Type Schemes'],['priorityCount','Priorities'],['statusCount','Statuses'],['screenCount','Screens'],['screenSchemeCount','Screen Schemes'],['issueTypeScreenSchemeCount','Issue Type Screen Schemes'],['notificationSchemeCount','Notification Schemes'],['permissionSchemeCount','Permission Schemes'],['issueSecuritySchemeCount','Security Schemes'],['type','Source Type']];
+          let h = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
+          globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''} <span style="cursor:pointer; text-decoration:underline; float:right; text-transform:none;" onclick="dl(${i})">Export</span></th>`);
           h+='</tr></thead><tbody>';
-          keys.forEach(([k,l]) => {
-              h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>';
-          });
-          document.getElementById('table-area').innerHTML = h + '</tbody></table>';
+          keys.forEach(([k,l]) => { h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>'; });
+          document.getElementById('table-area').innerHTML = h + '</tbody></table></div>';
       }
     </script>
 </body>
