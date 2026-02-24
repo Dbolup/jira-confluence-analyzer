@@ -100,7 +100,16 @@
             const val = el.value; const manInp = el.nextElementSibling; const pSel = el.parentElement.nextElementSibling.querySelector('select');
             let config = {};
             if(val === 'manual') { manInp.style.display = 'block'; if(!manInp.value) return; if(!defCreds.email) return alert('Save default creds first'); config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token }; } 
-            else { manInp.style.display = 'none'; if(!val) { pSel.disabled=true; return; } const [type, idx] = val.split('-'); if(type==='c') { config = { type:'cloud', ...cloudSites[idx] }; } else { config = { type:'dc', ...dcConns[idx] }; } }
+            else { 
+                manInp.style.display = 'none'; 
+                if(!val) { pSel.disabled=true; return; } 
+                const [type, idx] = val.split('-'); 
+                if(type==='c') { 
+                    config = { type: 'cloud', domain: cloudSites[idx].domain, email: cloudSites[idx].email, token: cloudSites[idx].token }; 
+                } else { 
+                    config = { type: 'dc', name: dcConns[idx].name, host: dcConns[idx].host, database: dcConns[idx].database, user: dcConns[idx].user, password: dcConns[idx].password, port: dcConns[idx].port, ssl: dcConns[idx].ssl, typeDB: dcConns[idx].type }; 
+                } 
+            }
 
             pSel.innerHTML = '<option>Loading...</option>';
             try {
