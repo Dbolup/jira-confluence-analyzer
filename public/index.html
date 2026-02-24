@@ -2,32 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Workspace Analyzer</title>
+    <title>DRIFT</title>
     <style>
         :root { --bg: #ffffff; --fg: #000000; --border: #e5e5e5; --sidebar: #0a0a0a; --sidebar-text: #a3a3a3; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
         body { display: flex; height: 100vh; background: var(--bg); color: var(--fg); overflow: hidden; }
         
+        /* Sidebar */
         .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; padding: 2.5rem 2rem; border-right: 1px solid #222; }
         .logo { color: #fff; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 3rem; text-transform: uppercase; }
         .nav-item { display: block; color: var(--sidebar-text); text-decoration: none; padding: 0.6rem 0; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
         .nav-item:hover, .nav-item.active { color: #fff; }
         .nav-group { margin-bottom: 1.5rem; }
         .nav-title { display: flex; justify-content: space-between; color: #fff; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0.6rem 0; cursor: pointer; border-bottom: 1px solid #333; margin-bottom: 0.5rem; }
-        .submenu { display: none; padding-left: 0.5rem; }
-        .submenu.open { display: block; }
+        .submenu { display: none; padding-left: 0.5rem; } .submenu.open { display: block; }
         
-        .main-content { flex: 1; overflow-y: auto; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
-        h1 { font-size: 2.5rem; font-weight: 400; margin-bottom: 1rem; letter-spacing: -1px; }
-        p { color: #666; font-size: 1.1rem; max-width: 600px; line-height: 1.6; }
+        /* Main Content */
+        .main-content { flex: 1; overflow-y: auto; padding: 4rem 5rem; display: flex; flex-direction: column; align-items: flex-start; }
+        
+        /* Hero Section */
+        .hero { margin-bottom: 3rem; border-bottom: 2px solid var(--fg); padding-bottom: 1.5rem; width: 100%; max-width: 1000px; }
+        h1 { font-size: 3rem; font-weight: 800; letter-spacing: -1.5px; text-transform: uppercase; margin-bottom: 0.5rem; line-height: 1; }
+        .subtitle { font-size: 1.1rem; color: #666; max-width: 600px; font-weight: 500; letter-spacing: -0.2px; }
+
+        /* Grid Layout */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; width: 100%; max-width: 1000px; }
+        
+        /* Brutalist Cards */
+        .card { background: var(--bg); border: 1px solid var(--border); padding: 2rem; display: flex; flex-direction: column; transition: all 0.2s ease; position: relative; }
+        .card:hover { border-color: var(--fg); box-shadow: 6px 6px 0px var(--fg); transform: translate(-2px, -2px); }
+        
+        .card-num { font-family: monospace; font-size: 2.5rem; font-weight: 800; color: #e0e0e0; position: absolute; top: 1rem; right: 1.5rem; line-height: 1; }
+        .card-title { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: -0.5px; margin-bottom: 1rem; color: var(--fg); width: 85%; }
+        .card-text { font-size: 0.9rem; color: #555; line-height: 1.6; flex: 1; }
+        
+        /* Code Block Styling inside Cards */
+        .code-snippet { background: #fafafa; border: 1px solid var(--border); padding: 0.8rem; margin-top: 1rem; font-family: monospace; font-size: 0.8rem; color: #000; display: block; }
+        .highlight { font-weight: 700; color: var(--fg); text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo">Analyzer</div>
+        <div class="logo">DRFT</div>
         
         <div class="nav-group">
-            <a href="/" class="nav-title" style="text-decoration: none; display: block;">HOME</a>
+            <a href="/" class="nav-title" style="text-decoration: none; display: block; color: #fff;">HOME</a>
         </div>
         
         <div class="nav-group">
@@ -52,9 +71,43 @@
     </div>
     
     <div class="main-content">
-        <h1>Jira, Confluence Compare Buddy</h1>
-        <p>Select a platform from the sidebar to begin analyzing configurations, schemes, and usage statistics.</p>
-        <p>Supports multisite concurrent analysis.</p>
+        <div class="hero">
+            <h1>Jira & Confluence<br>Compare Buddy</h1>
+            <div class="subtitle">Easily analyze your sites' configurations and compare stats across multiple environments in parallel.</div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-num">01</div>
+                <div class="card-title">Configure Credentials</div>
+                <div class="card-text">
+                    From the sidebar, start by setting up your credentials. If you are using different credentials for multiple cloud sites, configure each site individually. Otherwise, just save a default credential for all sites.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-num">02</div>
+                <div class="card-title">Analyze & Compare</div>
+                <div class="card-text">
+                    Select a platform from the sidebar to begin. You can run parallel, multi-site analysis to instantly compare project configurations, schemes, and general usage statistics.
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-num">03</div>
+                <div class="card-title">Connect Local Databases</div>
+                <div class="card-text">
+                    Because this tool is cloud-hosted, it cannot directly reach your local machine. If you want to analyze a local Data Center database, use a secure tunnel like <a href="https://ngrok.com" target="_blank" class="highlight">Ngrok</a>.
+                    <span class="code-snippet">
+                        $ ngrok tcp 5432  // For PostgreSQL<br>
+                        $ ngrok tcp 3306  // For MySQL
+                    </span>
+                    <div style="margin-top: 1rem; border-left: 2px solid var(--fg); padding-left: 1rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
+                        Security Note: Only do this for temporary analysis. Close the Ngrok terminal immediately when finished to cut off public access to your database.
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
