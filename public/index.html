@@ -95,15 +95,26 @@
 
             <div class="card" style="grid-column: span 2;">
                 <div class="card-num">03</div>
+                <div class="card-title">Track Data Changes & Consolidations</div>
+                <div class="card-text">
+                    From the  Jira or Confluence general stats page, you can run an analysis and export the results as a JSON file. Later, you can upload that saved file back into the tool to compare historical data against your live site. This is the perfect for auditing data changes especially during instance consolidations.
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-num">04</div>
                 <div class="card-title">Connect Local Databases</div>
                 <div class="card-text">
-                    Because this tool is cloud-hosted, it cannot directly reach your local machine. If you want to analyze a local Data Center database, use a secure tunnel like <a href="https://ngrok.com" target="_blank" class="highlight">Ngrok</a>.
+                    Because this tool is cloud-hosted, it cannot directly reach your local machine. If you want to analyze a local Data Center database, use a free secure tunnel via <a href="https://pinggy.io" target="_blank" class="highlight">Pinggy</a>.
                     <span class="code-snippet">
-                        $ ngrok tcp 5432  // For PostgreSQL<br>
-                        $ ngrok tcp 3306  // For MySQL
+                        $ ssh -p 443 -R0:localhost:5432 tcp@a.pinggy.io  // For PostgreSQL<br>
+                        $ ssh -p 443 -R0:localhost:3306 tcp@a.pinggy.io  // For MySQL
                     </span>
+                    <div style="margin-top: 1rem; color: #555;">
+                        Pinggy will output a TCP link (e.g., <code>tcp://tcp.free.pinggy.link:43215</code>). Enter <b>tcp.free.pinggy.link</b> as the Host and <b>43215</b> as the Port in your Credentials form.
+                    </div>
                     <div style="margin-top: 1rem; border-left: 2px solid var(--fg); padding-left: 1rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
-                        Security Note: Only do this for temporary analysis. Close the Ngrok terminal immediately when finished to cut off public access to your database.
+                        Security Note: Only do this for temporary analysis. Close the Pinggy terminal immediately when finished to cut off public access to your database.
                     </div>
                 </div>
             </div>
