@@ -3,13 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <title>DRIFT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #ffffff; --fg: #000000; --border: #e5e5e5; --sidebar: #0a0a0a; --sidebar-text: #a3a3a3; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
         body { display: flex; height: 100vh; background: var(--bg); color: var(--fg); overflow: hidden; }
         
+        /* Custom Brutalist Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); border-left: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb { background: var(--fg); border-radius: 0px; }
+        ::-webkit-scrollbar-thumb:hover { background: #333; }
+        
         /* Sidebar */
-        .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; padding: 2.5rem 2rem; border-right: 1px solid #222; }
+        .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; padding: 2.5rem 2rem; border-right: 1px solid #222; z-index: 10; }
         .logo { color: #fff; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 3rem; text-transform: uppercase; }
         .nav-item { display: block; color: var(--sidebar-text); text-decoration: none; padding: 0.6rem 0; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
         .nav-item:hover, .nav-item.active { color: #fff; }
@@ -17,11 +24,20 @@
         .nav-title { display: flex; justify-content: space-between; color: #fff; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0.6rem 0; cursor: pointer; border-bottom: 1px solid #333; margin-bottom: 0.5rem; }
         .submenu { display: none; padding-left: 0.5rem; } .submenu.open { display: block; }
         
-        /* Main Content */
-        .main-content { flex: 1; overflow-y: auto; padding: 4rem 5rem; display: flex; flex-direction: column; align-items: flex-start; }
+        /* Main Content with Dot Grid */
+        .main-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 4rem 5rem; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
         
         /* Hero Section */
-        .hero { margin-bottom: 3rem; border-bottom: 2px solid var(--fg); padding-bottom: 1.5rem; width: 100%; max-width: 1000px; }
+        .hero { margin-bottom: 3rem; border-bottom: 2px solid var(--fg); padding-bottom: 1.5rem; width: 100%; max-width: 1000px; background: var(--bg); }
         h1 { font-size: 3rem; font-weight: 800; letter-spacing: -1.5px; text-transform: uppercase; margin-bottom: 0.5rem; line-height: 1; }
         .subtitle { font-size: 1.1rem; color: #666; max-width: 600px; font-weight: 500; letter-spacing: -0.2px; }
 
@@ -29,8 +45,9 @@
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; width: 100%; max-width: 1000px; }
         
         /* Brutalist Cards */
-        .card { background: var(--bg); border: 1px solid var(--border); padding: 2rem; display: flex; flex-direction: column; transition: all 0.2s ease; position: relative; }
+        .card { background: var(--bg); border: 1px solid var(--border); padding: 2rem; display: flex; flex-direction: column; transition: all 0.2s ease; position: relative; cursor: default; }
         .card:hover { border-color: var(--fg); box-shadow: 6px 6px 0px var(--fg); transform: translate(-2px, -2px); }
+        .card:active { transform: translate(0px, 0px); box-shadow: 2px 2px 0px var(--fg); }
         
         .card-num { font-family: monospace; font-size: 2.5rem; font-weight: 800; color: #e0e0e0; position: absolute; top: 1rem; right: 1.5rem; line-height: 1; }
         .card-title { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: -0.5px; margin-bottom: 1rem; color: var(--fg); width: 85%; }
@@ -97,7 +114,7 @@
                 <div class="card-num">03</div>
                 <div class="card-title">Track Data Changes & Consolidations</div>
                 <div class="card-text">
-                    From the  Jira or Confluence general stats page, you can run an analysis and export the results as a JSON file. Later, you can upload that saved file back into the tool to compare historical data against your live site. This is the perfect for auditing data changes especially during instance consolidations.
+                    From the Jira or Confluence general stats page, you can run an analysis and export the results as a JSON file. Later, you can upload that saved file back into the tool to compare historical data against your live site. This is perfect for auditing data changes, especially during instance consolidations.
                 </div>
             </div>
 
