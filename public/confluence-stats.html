@@ -50,6 +50,10 @@
         </div>
 
         <div class="nav-group">
+            <a href="/discovery" class="nav-title" style="text-decoration: none; display: block;">DISCOVERY</a>
+        </div>
+
+        <div class="nav-group">
             <div class="nav-title" onclick="toggleMenu('jira-menu')">JIRA <span id="jira-icon">+</span></div>
             <div class="submenu" id="jira-menu">
                 <a href="/jira-stats" class="nav-item">General Stats</a>
@@ -79,6 +83,7 @@
         <div id="table-area"></div>
     </div>
 
+    <script src="/js/modal.js"></script>
     <script>
       function toggleMenu(id) { const el = document.getElementById(id); const icon = document.getElementById(id.split('-')[0] + '-icon'); if(el.classList.contains('open')) { el.classList.remove('open'); icon.innerText = '+'; } else { el.classList.add('open'); icon.innerText = '-'; } }
 
@@ -113,7 +118,7 @@
               try {
                   const res = await fetch('/api/confluence/stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sites}) });
                   const data = await res.json(); globalData = [...globalData, ...data.results]; render();
-              } catch(e) { alert(e.message); }
+              } catch(e) { showAlert(e.message); }
           }
           btn.innerText = 'Run Analysis'; btn.disabled = false;
       }
@@ -125,7 +130,12 @@
           let h = '<div class="table-wrapper"><table><thead><tr><th>Metric</th>';
           globalData.forEach((d,i) => h+=`<th>${d.name || d.domain || 'Unknown'}${d.isSaved?' (Saved)':''} <span style="cursor:pointer; text-decoration:underline; float:right; text-transform:none;" onclick="dl(${i})">Export</span></th>`);
           h+='</tr></thead><tbody>';
-          keys.forEach(([k,l]) => { h+=`<tr><td>${l}</td>` + globalData.map(d => `<td>${d[k]||0}</td>`).join('') + '</tr>'; });
+          keys.forEach(([k,l]) => { h+=`<tr><td>${l}</td>` + globalData.map(d => {
+              if(d.error) return `<td style="color:#b91c1c" title="${String(d.error).replace(/"/g,'&quot;')}">Error</td>`;
+              const v = d[k];
+              if(v === null) return `<td title="Unavailable" style="color:#aaa; font-style:italic">—</td>`;
+              return `<td>${v ?? 0}</td>`;
+          }).join('') + '</tr>'; });
           document.getElementById('table-area').innerHTML = h + '</tbody></table></div>';
       }
     </script>

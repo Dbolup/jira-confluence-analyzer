@@ -1,0 +1,5 @@
+{
+  "main": "dist/dc-runner/bundle.cjs",
+  "output": "dist/dc-runner/sea-prep.blob",
+  "disableExperimentalSEAWarning": true
+}

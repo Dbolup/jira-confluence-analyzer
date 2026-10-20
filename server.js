@@ -1,4 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
+import { runChecks } from './checks/registry.js';
+import { computeJiraStatsCloud, computeJiraStatsDc, computeConfluenceStatsCloud, computeConfluenceStatsDc } from './stats.js';
+import { openDbConnection } from './dbConnection.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch'; 
@@ -21,6 +25,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // 🔒 SECURITY (AES-256 Encryption)
 // ==========================================
 const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_KEY || 'v9y$B&E)H@MbQeThWmZq4t7w!z%C*F-J', 'utf8');
+if (!process.env.ENCRYPTION_KEY) {
+    console.warn('⚠ ENCRYPTION_KEY is not set — using the built-in development key. Set your own in a real deployment before anyone stores credentials.');
+}
 
 function encrypt(text) {
     if (!text) return text;
@@ -65,6 +72,7 @@ app.get('/insights', (req, res) => res.sendFile(path.join(__dirname, 'public/ins
 app.get('/credentials', (req, res) => res.sendFile(path.join(__dirname, 'public/credentials.html')));
 app.get('/confluence-stats', (req, res) => res.sendFile(path.join(__dirname, 'public/confluence-stats.html')));
 app.get('/confluence-compare', (req, res) => res.sendFile(path.join(__dirname, 'public/confluence-compare.html')));
+app.get('/discovery', (req, res) => res.sendFile(path.join(__dirname, 'public/discovery.html')));
 
 const getAuthHeaders = (email, token) => ({ 
     'Authorization': `Basic ${Buffer.from(`${decrypt(email)}:${decrypt(token)}`).toString('base64')}`, 
@@ -86,7 +94,10 @@ async function queryDB(config, query, params = []) {
         };
         if (config.ssl) pgConfig.ssl = { rejectUnauthorized: false };
         const pool = new Pool(pgConfig);
-        try { const res = await pool.query(query, params); await pool.end(); return res.rows; } 
+        // Call sites write queries with MySQL-style '?' placeholders; translate to Postgres's '$1, $2, ...' here.
+        let paramIndex = 0;
+        const pgQuery = query.replace(/\?/g, () => `$${++paramIndex}`);
+        try { const res = await pool.query(pgQuery, params); await pool.end(); return res.rows; }
         catch (e) { await pool.end(); throw e; }
     } else if (config.type === 'mysql') {
         const conn = await mysql.createConnection({ 
@@ -112,48 +123,10 @@ app.post('/api/stats', async (req, res, next) => {
       try {
         if (site.type === 'cloud') {
             const headers = getAuthHeaders(site.email, site.token);
-            const baseUrl = getBaseUrl(site.domain);
-            const fetchAPI = async (endpoint) => {
-                const r = await fetch(`${baseUrl}/${endpoint}`, { headers });
-                if(!r.ok) throw new Error(`${endpoint} ${r.statusText}`);
-                return r.json();
-            };
-            const safe = (p) => p.catch(e => ({ error: e.message }));
-
-            const [p, f, w, ws, it, its, pr, st, ns, iss, sc, scs, itss, fc, fcs, r, fl, perm] = await Promise.all([
-                safe(fetchAPI('project')), safe(fetchAPI('field')), safe(fetchAPI('workflow')), safe(fetchAPI('workflowscheme')),
-                safe(fetchAPI('issuetype')), safe(fetchAPI('issuetypescheme')), safe(fetchAPI('priority')), safe(fetchAPI('status')),
-                safe(fetchAPI('notificationscheme')), safe(fetchAPI('issuesecurityschemes')), safe(fetchAPI('screens')), safe(fetchAPI('screenscheme')),
-                safe(fetchAPI('issuetypescreenscheme')), safe(fetchAPI('fieldconfiguration')), safe(fetchAPI('fieldconfigurationscheme')), safe(fetchAPI('resolution')),
-                safe(fetchAPI('filter/search')), safe(fetchAPI('permissionscheme'))
-            ]);
-
-            results.push({
-                domain: site.domain, type: 'Cloud', name: site.domain,
-                projectCount: p.length || p.total || 0, fieldCount: f.length || 0,
-                workflowCount: w.length || 0, workflowSchemeCount: ws.total || 0,
-                issueTypeCount: it.length || 0, issueTypeSchemeCount: its.total || 0,
-                priorityCount: pr.length || 0, statusCount: st.length || 0, 
-                notificationSchemeCount: ns.total || 0, issueSecuritySchemeCount: iss.issueSecuritySchemes ? iss.issueSecuritySchemes.length : 0,
-                screenCount: sc.total || 0, screenSchemeCount: scs.total || 0, issueTypeScreenSchemeCount: itss.total || 0,
-                fieldConfigurationCount: fc.total || 0, fieldConfigurationSchemeCount: fcs.total || 0,
-                resolutionCount: r.length || 0, filterCount: fl.total || 0, permissionSchemeCount: perm.permissionSchemes ? perm.permissionSchemes.length : 0
-            });
+            const jiraBaseUrl = getBaseUrl(site.domain);
+            results.push(await computeJiraStatsCloud({ domain: site.domain, headers, jiraBaseUrl }));
         } else {
-            const count = async (table) => { try { const res = await queryDB(site, `SELECT count(*) as "cnt" FROM ${table}`); return res[0]?.cnt || 0; } catch(e) { return 0; } };
-            const [p, cf, w, ws, it, st, r, prio, ns, perm, iss, sc, scs, itss, fcs] = await Promise.all([
-                count('project'), count('customfield'), count('jiraworkflows'), count('workflowscheme'), count('issuetype'), 
-                count('issuestatus'), count('resolution'), count('priority'), count('notificationscheme'), count('permissionscheme'), count('issuesecurityscheme'),
-                count('fieldscreen'), count('fieldscreenscheme'), count('issuetypescreenscheme'), count('fieldlayoutscheme')
-            ]);
-            results.push({
-                domain: site.name, type: 'Data Center', name: site.name,
-                projectCount: p, fieldCount: cf, workflowCount: w, workflowSchemeCount: ws, issueTypeCount: it,
-                issueTypeSchemeCount: await queryDB(site, `SELECT count(*) as "cnt" FROM fieldconfigscheme fcs JOIN fieldconfiguration fc ON fcs.id = fc.fieldconfigscheme WHERE fc.fieldid='issuetype'`).then(r=>r[0]?.cnt||0).catch(()=>0),
-                statusCount: st, resolutionCount: r, priorityCount: prio, notificationSchemeCount: ns, permissionSchemeCount: perm, issueSecuritySchemeCount: iss,
-                screenCount: sc, screenSchemeCount: scs, issueTypeScreenSchemeCount: itss, fieldConfigurationSchemeCount: fcs, fieldConfigurationCount: "N/A (DB)",
-                filterCount: await count('searchrequest')
-            });
+            results.push(await computeJiraStatsDc({ name: site.name, query: (sql, params) => queryDB(site, sql, params) }));
         }
       } catch (e) { results.push({ domain: site.domain || site.name, error: e.message }); }
     }
@@ -269,30 +242,30 @@ app.post('/api/compare-projects', async (req, res, next) => {
                 } else {
                     // --- DATA CENTER LOGIC ---
                     const [countRes, compRes] = await Promise.all([
-                        queryDB(src, `SELECT count(*) as "cnt" FROM jiraissue WHERE project = (SELECT id FROM project WHERE pkey = '${pKey}')`),
-                        queryDB(src, `SELECT count(*) as "cnt" FROM component WHERE project = (SELECT id FROM project WHERE pkey = '${pKey}')`)
+                        queryDB(src, `SELECT count(*) as "cnt" FROM jiraissue WHERE project = (SELECT id FROM project WHERE pkey = ?)`, [pKey]),
+                        queryDB(src, `SELECT count(*) as "cnt" FROM component WHERE project = (SELECT id FROM project WHERE pkey = ?)`, [pKey])
                     ]);
 
                     let leadName = "Unknown";
                     try {
-                        const leadSql = `SELECT u.display_name FROM project p LEFT JOIN app_user au ON p.lead = au.user_key LEFT JOIN cwd_user u ON au.lower_user_name = u.lower_user_name WHERE p.pkey = '${pKey}'`;
-                        const leadData = await queryDB(src, leadSql);
+                        const leadSql = `SELECT u.display_name FROM project p LEFT JOIN app_user au ON p.lead = au.user_key LEFT JOIN cwd_user u ON au.lower_user_name = u.lower_user_name WHERE p.pkey = ?`;
+                        const leadData = await queryDB(src, leadSql, [pKey]);
                         if (leadData[0]?.display_name) leadName = leadData[0].display_name;
                     } catch(e) {}
 
                     const getScheme = async (entity, table) => {
                         try {
-                            const sql = `SELECT s.NAME FROM nodeassociation na JOIN ${table} s ON na.SINK_NODE_ID = s.ID WHERE na.SOURCE_NODE_ENTITY = 'Project' AND na.SINK_NODE_ENTITY = '${entity}' AND na.SOURCE_NODE_ID = (SELECT id FROM project WHERE pkey = '${pKey}')`;
-                            const r = await queryDB(src, sql);
+                            const sql = `SELECT s.NAME FROM nodeassociation na JOIN ${table} s ON na.SINK_NODE_ID = s.ID WHERE na.SOURCE_NODE_ENTITY = 'Project' AND na.SINK_NODE_ENTITY = '${entity}' AND na.SOURCE_NODE_ID = (SELECT id FROM project WHERE pkey = ?)`;
+                            const r = await queryDB(src, sql, [pKey]);
                             return r[0]?.NAME || "-";
                         } catch(e) { return "-"; }
                     };
 
                     const getConfigScheme = async (fieldId) => {
                         try {
-                            const sql = `SELECT fs.configname FROM fieldconfigscheme fs JOIN configurationcontext cc ON fs.id = cc.fieldconfigscheme WHERE cc.project = (SELECT id FROM project WHERE pkey = '${pKey}') AND cc.fieldid = '${fieldId}'`;
-                            const res = await queryDB(src, sql);
-                            return res[0]?.configname || "-"; 
+                            const sql = `SELECT fs.configname FROM fieldconfigscheme fs JOIN configurationcontext cc ON fs.id = cc.fieldconfigscheme WHERE cc.project = (SELECT id FROM project WHERE pkey = ?) AND cc.fieldid = '${fieldId}'`;
+                            const res = await queryDB(src, sql, [pKey]);
+                            return res[0]?.configname || "-";
                         } catch(e) { return "-"; }
                     };
 
@@ -329,31 +302,10 @@ app.post('/api/confluence/stats', async (req, res, next) => {
       try {
           if (site.type === 'cloud') {
               const headers = getAuthHeaders(site.email, site.token);
-              const baseUrl = getBaseUrl(site.domain, 'confluence');
-              const r = await fetch(`${baseUrl}/space?limit=500`, { headers });
-              const data = await r.json();
-              const spaces = data.results || [];
-              
-              results.push({ 
-                  domain: site.domain, type: 'Cloud', name: site.domain, 
-                  total: spaces.length,
-                  active: spaces.filter(s => s.status === 'current').length,
-                  archived: spaces.filter(s => s.status === 'archived').length,
-                  global: spaces.filter(s => s.type === 'global').length,
-                  personal: spaces.filter(s => s.type === 'personal').length
-              });
+              const confluenceBaseUrl = getBaseUrl(site.domain, 'confluence');
+              results.push(await computeConfluenceStatsCloud({ domain: site.domain, headers, confluenceBaseUrl }));
           } else {
-              const count = async (where='') => {
-                  const res = await queryDB(site, `SELECT count(*) as "cnt" FROM spaces ${where}`);
-                  return res[0]?.cnt || 0;
-              };
-              results.push({
-                  domain: site.name, type: 'Data Center', name: site.name,
-                  total: await count("WHERE spacestatus = 'CURRENT' OR spacestatus IS NULL"), 
-                  global: await count("WHERE spacetype = 'global' AND (spacestatus = 'CURRENT' OR spacestatus IS NULL)"),
-                  personal: await count("WHERE spacetype = 'personal' AND (spacestatus = 'CURRENT' OR spacestatus IS NULL)"),
-                  archived: await count("WHERE spacestatus = 'ARCHIVED'")
-              });
+              results.push(await computeConfluenceStatsDc({ name: site.name, query: (sql, params) => queryDB(site, sql, params) }));
           }
       } catch (e) { results.push({ domain: site.domain||site.name, error: e.message }); }
     }
@@ -427,16 +379,16 @@ app.post('/api/confluence/compare-spaces', async (req, res, next) => {
                 });
             } else {
                 const count = async (cType) => {
-                    const sql = `SELECT count(*) as "cnt" FROM content c JOIN spaces s ON c.spaceid = s.spaceid WHERE s.spacekey = '${key}' AND c.contenttype = '${cType}' AND (c.content_status = 'current' OR c.content_status IS NULL)`;
-                    const res = await queryDB(src, sql);
+                    const sql = `SELECT count(*) as "cnt" FROM content c JOIN spaces s ON c.spaceid = s.spaceid WHERE s.spacekey = ? AND c.contenttype = '${cType}' AND (c.content_status = 'current' OR c.content_status IS NULL)`;
+                    const res = await queryDB(src, sql, [key]);
                     return res[0]?.cnt || 0;
                 };
                 const [p, b, a] = await Promise.all([ count('PAGE'), count('BLOGPOST'), count('ATTACHMENT') ]);
 
                 let ownerName = "Unknown";
                 try {
-                    const ownerSql = `SELECT u.display_name FROM spaces s JOIN user_mapping um ON s.creator = um.user_key JOIN cwd_user u ON um.username = u.user_name WHERE s.spacekey = '${key}'`;
-                    const ownerRes = await queryDB(src, ownerSql);
+                    const ownerSql = `SELECT u.display_name FROM spaces s JOIN user_mapping um ON s.creator = um.user_key JOIN cwd_user u ON um.username = u.user_name WHERE s.spacekey = ?`;
+                    const ownerRes = await queryDB(src, ownerSql, [key]);
                     if(ownerRes[0]?.display_name) ownerName = ownerRes[0].display_name;
                 } catch(e) {}
 
@@ -450,6 +402,75 @@ app.post('/api/confluence/compare-spaces', async (req, res, next) => {
     }
     res.json({ results });
   } catch(e) { next(e); }
+});
+
+// 7. Discovery — runs the check registry against a single source (Cloud, or DC on Postgres/MySQL).
+// Oracle/MSSQL discovery is a separate, not-yet-scoped follow-on (Phase 5's plan).
+app.post('/api/discovery/run', async (req, res, next) => {
+  try {
+    const { source } = req.body;
+    if (!source) return res.status(400).json({ error: 'A source is required.' });
+    const startedAt = new Date().toISOString();
+
+    if (source.type === 'cloud') {
+      const headers = getAuthHeaders(source.email, source.token);
+      const jiraBaseUrl = getBaseUrl(source.domain);
+      const confluenceBaseUrl = getBaseUrl(source.domain, 'confluence');
+      // General Stats (jiraStats/confluenceStats) run alongside the checks, not gating them —
+      // a failure here degrades to an { error } object rather than failing the whole run,
+      // same "don't let one thing take down the batch" rule the checks themselves follow.
+      const [findings, jiraStats, confluenceStats] = await Promise.all([
+        runChecks('cloud', { site: source, headers, jiraBaseUrl, confluenceBaseUrl }),
+        computeJiraStatsCloud({ domain: source.domain, headers, jiraBaseUrl }).catch((e) => ({ error: e.message })),
+        computeConfluenceStatsCloud({ domain: source.domain, headers, confluenceBaseUrl }).catch((e) => ({ error: e.message })),
+      ]);
+      return res.json({ site: source.domain, startedAt, finishedAt: new Date().toISOString(), findings, jiraStats, confluenceStats });
+    }
+
+    if (source.type !== 'postgres' && source.type !== 'mysql') {
+      return res.status(400).json({ error: 'Discovery currently supports Cloud, Postgres, and MySQL sources.' });
+    }
+    let db;
+    try {
+      // openDbConnection (dbConnection.js) takes plaintext config — this is the one place that
+      // decrypts the browser-stored ciphertext before handing it off.
+      const dbConfig = { ...source, host: decrypt(source.host), user: decrypt(source.user),
+                          database: decrypt(source.database), password: decrypt(source.password) };
+      db = await openDbConnection(dbConfig);
+      const [findings, jiraStats, confluenceStats] = await Promise.all([
+        runChecks('dc', { site: source, db }),
+        computeJiraStatsDc({ name: source.name, query: db.query }).catch((e) => ({ error: e.message })),
+        computeConfluenceStatsDc({ name: source.name, query: db.query }).catch((e) => ({ error: e.message })),
+      ]);
+      res.json({ site: source.name, startedAt, finishedAt: new Date().toISOString(), findings, jiraStats, confluenceStats });
+    } finally {
+      if (db) await db.close();
+    }
+  } catch (e) { next(e); }
+});
+
+// 8. Discovery — validate credentials before committing to a full run.
+// Cloud: GET /myself. DC: SELECT 1, same as /api/test-db's already-proven pattern.
+app.post('/api/discovery/validate', async (req, res, next) => {
+  try {
+    const { source } = req.body;
+    if (!source) return res.status(400).json({ success: false, error: 'A source is required.' });
+
+    if (source.type === 'cloud') {
+      const headers = getAuthHeaders(source.email, source.token);
+      const baseUrl = getBaseUrl(source.domain);
+      const r = await fetch(`${baseUrl}/myself`, { headers });
+      if (!r.ok) return res.json({ success: false, error: `${r.status} ${r.statusText}` });
+      const me = await r.json();
+      return res.json({ success: true, displayName: me.displayName || me.emailAddress || source.email });
+    }
+
+    if (source.type !== 'postgres' && source.type !== 'mysql') {
+      return res.status(400).json({ success: false, error: 'Validation currently supports Cloud, Postgres, and MySQL sources.' });
+    }
+    await queryDB(source, 'SELECT 1');
+    res.json({ success: true, displayName: source.name || source.host });
+  } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
 app.use((err, req, res, next) => {

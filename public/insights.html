@@ -27,15 +27,22 @@
       .step { display: none; }
       .step.active { display: block; animation: fadeIn 0.4s; }
       @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
+      @media print {
+        .nav, .no-print { display: none !important; }
+        body { background: white; padding: 0; }
+        .container { box-shadow: none; padding: 0; max-width: 100%; }
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>Jira Detailed Insights</h1>
       <div class="nav"><a href="/">🏠 Dashboard</a><a href="/jira-stats">📊 Stats</a><a href="/compare">🔄 Compare</a><a href="/insights" class="active-link">🔍 Insights</a></div>
-      <div id="step1" class="step active"><div id="siteInputs"></div><button class="btn-add" onclick="addSiteInput()">➕ Add Site</button><button class="btn-go" onclick="runAnalysis()">🚀 Run Analysis</button></div>
-      <div id="step2" class="step"><button onclick="changeStep(1)" style="background:#64748b; float:left">⬅ Edit Selection</button><button class="btn-pdf" onclick="window.print()">📄 Save PDF</button><div style="clear:both"></div><div id="stats-container"><table id="stats-table"></table></div></div>
+      <div id="step1" class="step active no-print"><div id="siteInputs"></div><button class="btn-add" onclick="addSiteInput()">➕ Add Site</button><button class="btn-go" onclick="runAnalysis()">🚀 Run Analysis</button></div>
+      <div id="step2" class="step"><div class="no-print"><button onclick="changeStep(1)" style="background:#64748b; float:left">⬅ Edit Selection</button><button class="btn-pdf" onclick="window.print()">📄 Save PDF</button><div style="clear:both"></div></div><div id="stats-container"><table id="stats-table"></table></div></div>
     </div>
+    <script src="/js/modal.js"></script>
     <script>
       const saved = JSON.parse(sessionStorage.getItem('jiraInsightSites') || '[]');
       if(saved.length > 0) saved.forEach(url => addSiteInput(url)); else addSiteInput();
@@ -43,20 +50,24 @@
       function changeStep(n) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById('step'+n).classList.add('active'); }
       async function runAnalysis() {
         const inputs = document.querySelectorAll('.domain-in');
-        const creds = JSON.parse(localStorage.getItem('atlassianGlobalCreds')); // Using legacy global creds for simple insights if needed, or update to use new unified storage
-        if(!creds) return alert("Please set credentials first");
+        const creds = JSON.parse(localStorage.getItem('defaultCloudCreds') || '{}');
+        if(!creds.email) return showAlert("Please set your Default Cloud Identity on the Credentials page first");
         const sites = []; const siteUrls = [];
         inputs.forEach(inp => { if(inp.value) { sites.push({ domain: inp.value, email: creds.email, token: creds.token, type: 'cloud' }); siteUrls.push(inp.value); }});
         sessionStorage.setItem('jiraInsightSites', JSON.stringify(siteUrls));
-        if(sites.length === 0) return alert('Add a site');
+        if(sites.length === 0) return showAlert('Add a site');
         const btn = document.querySelector('.btn-go'); const old = btn.innerText; btn.innerText = 'Analyzing...'; btn.disabled = true;
         try {
           const res = await fetch('/api/stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sites }) });
           const data = await res.json(); renderTable(data.results); changeStep(2);
-        } catch(e) { alert(e.message); } finally { btn.innerText = old; btn.disabled = false; }
+        } catch(e) { showAlert(e.message); } finally { btn.innerText = old; btn.disabled = false; }
       }
       function renderTable(results) {
-        const metrics = [{ section: 'Projects', items: [['projectCount', 'Total Projects'], ['projectsActive', 'Active'], ['projectsArchived', 'Archived']] }, { section: 'Schemes', items: [['permissionSchemeCount', 'Permission Schemes'], ['workflowSchemeCount', 'Workflow Schemes'], ['issueTypeSchemeCount', 'Issue Type Schemes']] }, { section: 'Optimization', items: [['fieldsDuplicated', 'Duplicate Fields'], ['workflowSchemesInactive', 'Inactive Workflows'], ['issueTypeSchemesInactive', 'Inactive Issue Schemes']] }];
+        const metrics = [
+          { section: 'Projects', items: [['projectCount', 'Total Projects']] },
+          { section: 'Schemes', items: [['permissionSchemeCount', 'Permission Schemes'], ['workflowSchemeCount', 'Workflow Schemes'], ['issueTypeSchemeCount', 'Issue Type Schemes'], ['notificationSchemeCount', 'Notification Schemes'], ['issueSecuritySchemeCount', 'Security Schemes'], ['screenSchemeCount', 'Screen Schemes'], ['issueTypeScreenSchemeCount', 'Issue Type Screen Schemes'], ['fieldConfigurationSchemeCount', 'Field Configuration Schemes']] },
+          { section: 'Fields & Types', items: [['fieldCount', 'Custom Fields'], ['issueTypeCount', 'Issue Types'], ['priorityCount', 'Priorities'], ['statusCount', 'Statuses'], ['resolutionCount', 'Resolutions'], ['screenCount', 'Screens'], ['filterCount', 'Filters']] }
+        ];
         let html = '<tr><th>Metric</th>' + results.map(r => `<th>${r.domain}</th>`).join('') + '</tr>';
         for (const group of metrics) {
           html += `<tr><td colspan="${results.length + 1}" style="background:#f1f5f9; font-weight:bold; color:#475569; text-transform:uppercase; font-size:0.85rem; padding:0.8rem;">${group.section}</td></tr>`;
