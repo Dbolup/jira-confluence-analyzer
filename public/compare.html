@@ -36,6 +36,12 @@
         td:first-child { font-weight: 600; border-right: 1px solid var(--border); width: 220px; background: #fafafa; color: #000; }
         .metric-value { font-family: monospace; font-size: 0.9rem; }
         .more-link { font-size: 0.75rem; text-decoration: underline; cursor: pointer; margin-top: 5px; display: inline-block; color: #666; }
+
+        @media print {
+            .sidebar, .no-print { display: none !important; }
+            body { display: block; height: auto; overflow: visible; }
+            .main-content { padding: 0; overflow: visible; }
+        }
     </style>
 </head>
 <body>
@@ -48,6 +54,10 @@
         
         <div class="nav-group">
             <a href="/credentials" class="nav-title" style="text-decoration: none; display: block;">CREDENTIALS</a>
+        </div>
+
+        <div class="nav-group">
+            <a href="/discovery" class="nav-title" style="text-decoration: none; display: block;">DISCOVERY</a>
         </div>
 
         <div class="nav-group">
@@ -69,8 +79,8 @@
     
     <div class="main-content">
         <h1>Jira Project Comparison</h1>
-        <div id="rows-container"></div>
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+        <div id="rows-container" class="no-print"></div>
+        <div class="no-print" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
             <button class="btn btn-ghost" style="border:1px solid #000" onclick="addRow()">Add Project</button>
             <button class="btn" onclick="runCompare()">Run Comparison</button>
             <button class="btn btn-ghost" style="margin-left:auto" onclick="window.print()">Print / PDF</button>
@@ -78,6 +88,7 @@
         <div id="results-area"></div>
     </div>
 
+    <script src="/js/modal.js"></script>
     <script>
         function toggleMenu(id) { const el = document.getElementById(id); const icon = document.getElementById(id.split('-')[0] + '-icon'); if(el.classList.contains('open')) { el.classList.remove('open'); icon.innerText = '+'; } else { el.classList.add('open'); icon.innerText = '-'; } }
         
@@ -99,7 +110,7 @@
         async function loadProjs(el) {
             const val = el.value; const manInp = el.nextElementSibling; const pSel = el.parentElement.nextElementSibling.querySelector('select');
             let config = {};
-            if(val === 'manual') { manInp.style.display = 'block'; if(!manInp.value) return; if(!defCreds.email) return alert('Save default creds first'); config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token }; } 
+            if(val === 'manual') { manInp.style.display = 'block'; if(!manInp.value) return; if(!defCreds.email) return showAlert('Save default creds first'); config = { type:'cloud', domain: manInp.value, email: defCreds.email, token: defCreds.token }; } 
             else { 
                 manInp.style.display = 'none'; 
                 if(!val) { pSel.disabled=true; return; } 
@@ -107,7 +118,7 @@
                 if(type==='c') { 
                     config = { type: 'cloud', domain: cloudSites[idx].domain, email: cloudSites[idx].email, token: cloudSites[idx].token }; 
                 } else { 
-                    config = { type: 'dc', name: dcConns[idx].name, host: dcConns[idx].host, database: dcConns[idx].database, user: dcConns[idx].user, password: dcConns[idx].password, port: dcConns[idx].port, ssl: dcConns[idx].ssl, typeDB: dcConns[idx].type }; 
+                    config = { type: dcConns[idx].type, name: dcConns[idx].name, host: dcConns[idx].host, database: dcConns[idx].database, user: dcConns[idx].user, password: dcConns[idx].password, port: dcConns[idx].port, ssl: dcConns[idx].ssl };
                 } 
             }
 
@@ -124,7 +135,7 @@
         async function runCompare() {
             const selection = [];
             document.querySelectorAll('.p-select').forEach(s => { if(s.value && !s.disabled) { const opt = s.options[s.selectedIndex]; selection.push({ source: JSON.parse(opt.dataset.src), projectKey: s.value, projectId: opt.dataset.id }); } });
-            if(!selection.length) return alert("Please select at least one project");
+            if(!selection.length) return showAlert("Please select at least one project");
 
             const btn = document.querySelector('.btn'); const oldText = btn.innerText; btn.innerText = 'Processing...'; btn.disabled = true;
             const area = document.getElementById('results-area'); area.innerHTML = '';
@@ -157,7 +168,7 @@
                     }).join('') + '</tr>';
                 });
                 area.innerHTML = html + '</tbody></table></div>';
-            } catch(e) { alert(e.message); }
+            } catch(e) { showAlert(e.message); }
             btn.innerText = oldText; btn.disabled = false;
         }
 

@@ -3,7 +3,9 @@
   "version": "2.5.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --experimental-test-module-mocks --test",
+    "build:dc-runner": "bash scripts/build-dc-runner.sh"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
@@ -11,5 +13,9 @@
     "mysql2": "^3.9.2",
     "node-fetch": "^3.3.2",
     "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "1.0.0-alpha.6"
   }
 }

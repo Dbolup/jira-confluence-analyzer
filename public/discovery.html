@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discovery</title>
+    <style>
+        :root { --bg: #ffffff; --fg: #000000; --border: #e5e5e5; --sidebar: #0a0a0a; --sidebar-text: #a3a3a3; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+        body { display: flex; height: 100vh; background: var(--bg); color: var(--fg); overflow: hidden; }
+
+        .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; padding: 2.5rem 2rem; border-right: 1px solid #222; }
+        .logo { color: #fff; font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 3rem; text-transform: uppercase; }
+        .nav-item { display: block; color: var(--sidebar-text); text-decoration: none; padding: 0.6rem 0; font-size: 0.9rem; transition: 0.2s; cursor: pointer; }
+        .nav-item:hover, .nav-item.active { color: #fff; }
+        .nav-group { margin-bottom: 1.5rem; }
+        .nav-title { display: flex; justify-content: space-between; color: #fff; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0.6rem 0; cursor: pointer; border-bottom: 1px solid #333; margin-bottom: 0.5rem; }
+        .submenu { display: none; padding-left: 0.5rem; } .submenu.open { display: block; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 3rem 4rem; }
+        h1 { font-size: 1.8rem; font-weight: 400; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+
+        .btn { background: var(--fg); color: var(--bg); border: 1px solid var(--fg); padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn:hover { background: var(--bg); color: var(--fg); }
+        .btn:disabled { opacity: 0.5; cursor: default; }
+        .btn-ghost { background: transparent; color: var(--fg); border-color: var(--border); }
+        .btn-ghost:hover { border-color: var(--fg); }
+
+        label { display: block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; color: #666; }
+        select, input { width: 100%; padding: 0.6rem; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font-size: 0.9rem; margin-bottom: 1rem; }
+        .row { display: flex; gap: 1rem; } .col { flex: 1; }
+        .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+        .checkbox-row input { width: auto; margin: 0; }
+
+        /* Step indicator */
+        .step-indicator { display: flex; max-width: 700px; margin-bottom: 2.5rem; border-bottom: 1px solid var(--border); }
+        .step-dot { flex: 1; text-align: center; padding: 0.8rem 0; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #bbb; border-bottom: 2px solid transparent; position: relative; top: 1px; }
+        .step-dot.active { color: #000; border-bottom-color: #000; }
+        .step-dot.done { color: #666; }
+
+        .wizard-step { display: none; max-width: 700px; }
+        .wizard-step.active { display: block; }
+        .wizard-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+
+        /* Step 1: Connect */
+        .fork { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .fork-btn { flex: 1; padding: 1.5rem; border: 1px solid var(--border); background: #fafafa; cursor: pointer; font-size: 0.95rem; font-weight: 600; text-align: left; }
+        .fork-btn:hover { border-color: var(--fg); }
+        .divider { text-align: center; font-size: 0.7rem; color: #999; margin: 1.5rem 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hint { font-size: 0.8rem; color: #666; margin-top: -0.6rem; margin-bottom: 1.2rem; }
+        .hint a { color: #000; }
+        .back-link { font-size: 0.8rem; color: #666; cursor: pointer; text-decoration: underline; display: inline-block; margin-top: 1rem; }
+
+        /* Data Center guide */
+        .dc-guide ol { margin-left: 1.2rem; margin-top: 1rem; }
+        .dc-guide li { margin-bottom: 1.2rem; line-height: 1.6; font-size: 0.9rem; }
+        .dc-guide ul { margin-left: 1.2rem; margin-top: 0.4rem; }
+        .dc-guide .code-snippet { background: #fafafa; border: 1px solid var(--border); padding: 0.8rem; margin: 0.6rem 0; font-family: monospace; font-size: 0.8rem; display: block; }
+        .dc-guide .note { margin-top: 1rem; font-size: 0.8rem; color: #666; border-left: 2px solid var(--fg); padding-left: 1rem; }
+
+        /* Findings / report (Phase 2/3) */
+        .category-heading { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin: 2rem 0 0.75rem; }
+        .category-heading:first-child { margin-top: 0; }
+        .finding { border: 1px solid var(--border); padding: 1.2rem 1.5rem; margin-bottom: 1rem; max-width: 800px; }
+        .finding-head { display: flex; align-items: center; gap: 0.6rem; }
+        .finding-title { font-weight: 600; font-size: 0.95rem; }
+        .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 3px; }
+        .badge-info { background: #e5e5e5; color: #333; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-critical { background: #fee2e2; color: #991b1b; }
+        .badge-unavailable { background: #f1f5f9; color: #64748b; }
+        .finding-summary { margin: 0.6rem 0; font-family: monospace; font-size: 0.85rem; }
+        .finding-explanation { font-size: 0.85rem; color: #555; margin-top: 0.4rem; line-height: 1.5; }
+        .finding-recommendation { font-size: 0.85rem; color: #000; margin-top: 0.6rem; font-weight: 600; }
+        .finding-error { font-size: 0.8rem; color: #991b1b; margin-top: 0.6rem; }
+
+        .report-header { margin-bottom: 2rem; border-bottom: 2px solid var(--fg); padding-bottom: 1.5rem; max-width: 800px; }
+        .report-brand { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; color: #666; }
+        .report-header h2 { font-size: 1.4rem; font-weight: 600; margin: 0.3rem 0 1rem; }
+        .report-meta { font-size: 0.85rem; color: #444; display: flex; gap: 2rem; flex-wrap: wrap; }
+        .report-section { max-width: 800px; margin-bottom: 2.5rem; }
+        .report-section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .concern-row { border-left: 3px solid #64748b; padding: 0.7rem 1rem; margin-bottom: 0.7rem; background: #fafafa; font-size: 0.88rem; }
+        .concern-row.severity-critical { border-left-color: #991b1b; }
+        .concern-row.severity-warning { border-left-color: #92400e; }
+        .concern-rec { margin-top: 0.4rem; font-weight: 600; }
+        .no-concerns { color: #666; font-size: 0.9rem; }
+        .report-actions { max-width: 800px; margin-top: 1.5rem; }
+        .stats-table { width: 100%; max-width: 500px; border-collapse: collapse; font-size: 0.85rem; }
+        .stats-table th, .stats-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); text-align: left; }
+        .stats-table th { font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; color: #666; background: #fafafa; }
+        .stats-table td:first-child { font-weight: 600; background: #fafafa; }
+        .stats-table td:last-child { font-family: monospace; }
+        .finding-details { margin-top: 1rem; }
+        .finding-details h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin: 1.2rem 0 0.5rem; }
+        .details-table { max-width: 100%; }
+        .table-note { font-size: 0.8rem; color: #666; margin-top: 0.4rem; font-style: italic; }
+
+        @media print {
+            .sidebar, .step-indicator, .wizard-actions, .report-actions, .no-print { display: none !important; }
+            body { display: block; height: auto; overflow: visible; }
+            .main-content { padding: 0; overflow: visible; }
+            .finding, .concern-row, .stats-table tr { break-inside: avoid; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="/js/modal.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">DRFT</div>
+
+        <div class="nav-group">
+            <a href="/" class="nav-title" style="text-decoration: none; display: block;">HOME</a>
+        </div>
+
+        <div class="nav-group">
+            <a href="/credentials" class="nav-title" style="text-decoration: none; display: block;">CREDENTIALS</a>
+        </div>
+
+        <div class="nav-group">
+            <a href="/discovery" class="nav-title" style="text-decoration: none; display: block; color:#fff;">DISCOVERY</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title" onclick="toggleMenu('jira-menu')">JIRA <span id="jira-icon">+</span></div>
+            <div class="submenu" id="jira-menu">
+                <a href="/jira-stats" class="nav-item">General Stats</a>
+                <a href="/compare" class="nav-item">Compare Projects</a>
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-title" onclick="toggleMenu('conf-menu')">CONFLUENCE <span id="conf-icon">+</span></div>
+            <div class="submenu" id="conf-menu">
+                <a href="/confluence-stats" class="nav-item">General Stats</a>
+                <a href="/confluence-compare" class="nav-item">Compare Spaces</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h1>Discovery</h1>
+
+        <div class="step-indicator no-print" id="step-indicator">
+            <div class="step-dot active" data-step="1">1. Connect</div>
+            <div class="step-dot" data-step="2">2. Run</div>
+            <div class="step-dot" data-step="3">3. Review &amp; Export</div>
+        </div>
+
+        <!-- Step 1: Connect -->
+        <div class="wizard-step active" id="wizard-step-1">
+            <h2>Connect</h2>
+            <div class="fork" id="connect-fork">
+                <button class="fork-btn" onclick="chooseSourceType('cloud')">Jira / Confluence Cloud<br><span style="font-weight:400; font-size:0.8rem; color:#666">Runs the automated discovery checks</span></button>
+                <button class="fork-btn" onclick="chooseSourceType('dc')">Data Center<br><span style="font-weight:400; font-size:0.8rem; color:#666">Connect a PostgreSQL or MySQL database directly</span></button>
+            </div>
+
+            <div id="cloud-connect" style="display:none">
+                <span class="back-link" onclick="resetFork()">← Choose a different source type</span>
+                <label style="margin-top:1rem">Use a saved Cloud site</label>
+                <select id="saved-site-select" onchange="onSavedSiteChange(this)"></select>
+
+                <div id="new-site-form">
+                    <div class="divider">or connect a new site</div>
+                    <label>Domain</label>
+                    <input id="new-domain" placeholder="company.atlassian.net">
+                    <label>Email</label>
+                    <input id="new-email" placeholder="you@company.com">
+                    <label>API Token</label>
+                    <input id="new-token" type="password">
+                    <p class="hint">Need a token? <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Create one on id.atlassian.com →</a></p>
+                    <button class="btn" onclick="saveAndContinue(this)">Save &amp; Continue</button>
+                </div>
+
+                <div class="wizard-actions" id="saved-site-actions" style="display:none">
+                    <button class="btn" onclick="continueWithSavedSite()">Continue to Run →</button>
+                </div>
+            </div>
+
+            <div id="dc-connect" class="dc-guide" style="display:none">
+                <span class="back-link" onclick="resetFork()">← Choose a different source type</span>
+
+                <h3>Reaching the database</h3>
+                <p style="font-size:0.9rem; color:#444">If it's local, use <code>localhost</code> directly. If it's remote, expose it with a free tunnel via <a href="https://pinggy.io" target="_blank">Pinggy</a>:</p>
+                <span class="code-snippet">$ ssh -p 443 -R0:localhost:5432 tcp@a.pinggy.io &nbsp;# PostgreSQL<br>$ ssh -p 443 -R0:localhost:3306 tcp@a.pinggy.io &nbsp;# MySQL</span>
+                <p class="note">Pinggy prints a link like <code>tcp://tcp.free.pinggy.link:43215</code> — use <code>tcp.free.pinggy.link</code> as Host and <code>43215</code> as Port below. Only Postgres and MySQL are supported for discovery today; Oracle and MSSQL are a separate follow-on.</p>
+
+                <label style="margin-top:1.5rem">Use a saved Data Center connection</label>
+                <select id="saved-dc-select" onchange="onSavedDcChange(this)"></select>
+
+                <div id="new-dc-form">
+                    <div class="divider">or connect a new database</div>
+                    <div class="row">
+                        <div class="col"><label>Friendly Name</label><input id="dc-name" placeholder="e.g. Acme Production"></div>
+                        <div class="col"><label>Type</label><select id="dc-type"><option value="postgres">PostgreSQL</option><option value="mysql">MySQL</option></select></div>
+                    </div>
+                    <div class="row">
+                        <div class="col" style="flex:2"><label>Host</label><input id="dc-host" placeholder="tcp.free.pinggy.link"></div>
+                        <div class="col"><label>Port</label><input id="dc-port" placeholder="5432"></div>
+                        <div class="col"><label>Database</label><input id="dc-db"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col"><label>User</label><input id="dc-user"></div>
+                        <div class="col"><label>Password</label><input id="dc-pass" type="password"></div>
+                    </div>
+                    <div class="checkbox-row"><input type="checkbox" id="dc-ssl"><label style="margin:0">Use SSL</label></div>
+                    <p class="hint">Use a read-only database user for this connection if your database supports it.</p>
+                    <button class="btn" onclick="saveDcAndContinue(this)">Save &amp; Continue</button>
+                </div>
+
+                <div class="wizard-actions" id="saved-dc-actions" style="display:none">
+                    <button class="btn" onclick="continueWithSavedDc()">Continue to Run →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Run -->
+        <div class="wizard-step" id="wizard-step-2">
+            <h2>Run Discovery</h2>
+            <label>Prepared For</label>
+            <input id="prepared-for" placeholder="Customer / prospect name (optional)">
+            <div class="wizard-actions">
+                <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
+                <button class="btn" id="run-btn" onclick="runDiscovery()">Run Discovery</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Review & Export (kept as one screen — see plan notes on html2pdf and hidden elements) -->
+        <div class="wizard-step" id="wizard-step-3">
+            <div id="findings-area"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // report.js's own top-level exports aren't global (module scope) — the classic script
+        // below calls render()/downloadPDF() as bare identifiers (including from onclick="..."
+        // attributes in the HTML render() generates), which only resolve via the global object.
+        import { render, downloadPDF } from '/js/report.js';
+        window.render = render;
+        window.downloadPDF = downloadPDF;
+    </script>
+    <script>
+        function toggleMenu(id) { const el = document.getElementById(id); const icon = document.getElementById(id.split('-')[0] + '-icon'); if(el.classList.contains('open')) { el.classList.remove('open'); icon.innerText = '+'; } else { el.classList.add('open'); icon.innerText = '-'; } }
+
+        const cloudSites = JSON.parse(localStorage.getItem('savedCloudSites') || '[]');
+        const dcConns = JSON.parse(localStorage.getItem('savedDCConnections') || '[]');
+        let currentSource = null;
+
+        // ---------- Step navigation ----------
+        function goToStep(n) {
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+            document.getElementById('wizard-step-' + n).classList.add('active');
+            document.querySelectorAll('.step-dot').forEach(d => {
+                const step = Number(d.dataset.step);
+                d.classList.toggle('active', step === n);
+                d.classList.toggle('done', step < n);
+            });
+        }
+
+        // ---------- Step 1: Connect ----------
+        function chooseSourceType(type) {
+            document.getElementById('connect-fork').style.display = 'none';
+            if (type === 'cloud') {
+                document.getElementById('cloud-connect').style.display = 'block';
+                initSavedSiteSelect();
+            } else {
+                document.getElementById('dc-connect').style.display = 'block';
+                initSavedDcSelect();
+            }
+        }
+
+        function resetFork() {
+            document.getElementById('connect-fork').style.display = 'flex';
+            document.getElementById('cloud-connect').style.display = 'none';
+            document.getElementById('dc-connect').style.display = 'none';
+        }
+
+        function initSavedSiteSelect() {
+            const sel = document.getElementById('saved-site-select');
+            let opts = '<option value="">-- Select a saved Cloud site --</option>';
+            if (cloudSites.length) { opts += '<optgroup label="Saved Cloud">'; cloudSites.forEach((s, i) => opts += `<option value="${i}">${s.domain}</option>`); opts += '</optgroup>'; }
+            sel.innerHTML = opts;
+        }
+
+        function onSavedSiteChange(sel) {
+            const actions = document.getElementById('saved-site-actions');
+            const newForm = document.getElementById('new-site-form');
+            if (sel.value === '') { actions.style.display = 'none'; newForm.style.display = 'block'; return; }
+            actions.style.display = 'flex';
+            newForm.style.display = 'none';
+        }
+
+        function continueWithSavedSite() {
+            const sel = document.getElementById('saved-site-select');
+            const s = cloudSites[sel.value];
+            currentSource = { type: 'cloud', domain: s.domain, email: s.email, token: s.token };
+            goToStep(2);
+        }
+
+        async function saveAndContinue(btn) {
+            const domain = document.getElementById('new-domain').value.trim();
+            const rawEmail = document.getElementById('new-email').value.trim();
+            const rawToken = document.getElementById('new-token').value.trim();
+            if (!domain || !rawEmail || !rawToken) { showAlert('Domain, email, and API token are all required.'); return; }
+
+            const oldText = btn.innerText;
+            btn.innerText = 'Saving...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/encrypt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { email: rawEmail, token: rawToken } }) });
+                const enc = await res.json();
+                const site = { domain, email: enc.email, token: enc.token, displayEmail: rawEmail };
+                cloudSites.push(site);
+                localStorage.setItem('savedCloudSites', JSON.stringify(cloudSites));
+                currentSource = { type: 'cloud', domain: site.domain, email: site.email, token: site.token };
+                goToStep(2);
+            } catch (e) {
+                showAlert(e.message);
+            }
+            btn.innerText = oldText; btn.disabled = false;
+        }
+
+        // ---------- Step 1: Connect (Data Center) ----------
+        function initSavedDcSelect() {
+            const sel = document.getElementById('saved-dc-select');
+            let opts = '<option value="">-- Select a saved Data Center connection --</option>';
+            if (dcConns.length) { opts += '<optgroup label="Saved Data Center">'; dcConns.forEach((s, i) => opts += `<option value="${i}">${s.name}</option>`); opts += '</optgroup>'; }
+            sel.innerHTML = opts;
+        }
+
+        function onSavedDcChange(sel) {
+            const actions = document.getElementById('saved-dc-actions');
+            const newForm = document.getElementById('new-dc-form');
+            if (sel.value === '') { actions.style.display = 'none'; newForm.style.display = 'block'; return; }
+            actions.style.display = 'flex';
+            newForm.style.display = 'none';
+        }
+
+        function continueWithSavedDc() {
+            const sel = document.getElementById('saved-dc-select');
+            const s = dcConns[sel.value];
+            currentSource = { type: s.type, name: s.name, host: s.host, database: s.database, user: s.user, password: s.password, port: s.port, ssl: s.ssl };
+            goToStep(2);
+        }
+
+        async function saveDcAndContinue(btn) {
+            const name = document.getElementById('dc-name').value.trim();
+            const type = document.getElementById('dc-type').value;
+            const rawHost = document.getElementById('dc-host').value.trim();
+            const port = document.getElementById('dc-port').value.trim();
+            const rawDb = document.getElementById('dc-db').value.trim();
+            const rawUser = document.getElementById('dc-user').value.trim();
+            const rawPass = document.getElementById('dc-pass').value;
+            const ssl = document.getElementById('dc-ssl').checked;
+            if (!name || !rawHost || !rawDb || !rawUser) { showAlert('Friendly name, host, database, and user are all required.'); return; }
+
+            const oldText = btn.innerText;
+            btn.innerText = 'Saving...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/encrypt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { host: rawHost, database: rawDb, user: rawUser, password: rawPass } }) });
+                const enc = await res.json();
+                const conn = { name, type, port, ssl, host: enc.host, database: enc.database, user: enc.user, password: enc.password, displayHost: rawHost };
+                dcConns.push(conn);
+                localStorage.setItem('savedDCConnections', JSON.stringify(dcConns));
+                currentSource = { type: conn.type, name: conn.name, host: conn.host, database: conn.database, user: conn.user, password: conn.password, port: conn.port, ssl: conn.ssl };
+                goToStep(2);
+            } catch (e) {
+                showAlert(e.message);
+            }
+            btn.innerText = oldText; btn.disabled = false;
+        }
+
+        // ---------- Step 2: Run ----------
+        // No separate Validate step — testing credentials now happens on the Credentials page
+        // when a site/connection is added or edited. A bad credential here surfaces as
+        // 'unavailable' findings after Run, same graceful-degradation path as every other failure.
+        // render()/downloadPDF() live in public/js/report.js (Phase 6), loaded via the
+        // <script type="module"> bootstrap above this script tag, which puts them on window
+        // since this script (and the onclick="downloadPDF()" this page's own generated report
+        // HTML uses) isn't a module and can only see globals.
+        async function runDiscovery() {
+            const btn = document.getElementById('run-btn'); const oldText = btn.innerText;
+            btn.innerText = 'Running...'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/discovery/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: currentSource }) });
+                const data = await res.json();
+                if (!res.ok) { showAlert(data.error || 'Discovery failed'); return; }
+                render(data.findings, data);
+                goToStep(3);
+            } catch (e) { showAlert(e.message); }
+            btn.innerText = oldText; btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
