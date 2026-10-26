@@ -1,3 +1,4 @@
+ HEAD
 # Jira Analyzer
 
 A tool for inspecting, comparing, and running automated discovery against Jira/Confluence Cloud sites and Jira/Confluence Data Center instances — project counts, schemes, fields, workflows, spaces, installed apps, and more.
@@ -83,3 +84,7 @@ Nothing from a discovery run is persisted server-side — findings exist only in
 | `/confluence-compare` | Confluence space comparison |
 | `/credentials` | Manage Cloud/Data Center credentials |
 | `/discovery` | Automated discovery: Connect → Validate → Run → Review & Export |
+=======
+# jira-confluence-analyzer
+Standalone Jira and Confluence discovery app
+ 4e71907a3930986cf4ea9cf8dc567b3d7b2000a4
